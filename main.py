@@ -6,8 +6,10 @@ comparison tables.
 """
 
 import os
+import sys
 from scenarios import create_scenario1, create_scenario2, create_scenario3
 from simulation import EvacuationSimulation
+from algorithms import naive_sequential_strategy, nearest_neighbor_only
 from visualization import (
     plot_floor_plan,
     plot_cluster_assignment,
@@ -21,13 +23,14 @@ from visualization import (
 )
 
 
-def main():
+def main(output_dir: str = '/mnt/user-data/outputs'):
     """
     Run all three scenarios with varying responder counts.
     Generate all figures and tables.
-    Save results to /mnt/user-data/outputs/
+
+    Args:
+        output_dir: Directory to save outputs (default: /mnt/user-data/outputs)
     """
-    output_dir = '/mnt/user-data/outputs'
 
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
@@ -85,9 +88,13 @@ def main():
         for num_resp in responder_counts:
             print(f"\n  Testing with {num_resp} responder(s)...")
 
-            # Run simulation
+            # Scenario 3 uses reduced walking speed and visibility to demonstrate constraints
+            walking_speed = 1.0 if 'Scenario_3' in name else 1.5
+            visibility = 0.7 if 'Scenario_3' in name else 1.0
+
+            # Run optimized simulation
             sim = EvacuationSimulation(building, num_resp)
-            sim.run()
+            sim.run(walking_speed=walking_speed, visibility=visibility)
 
             # Print summary to console
             sim.print_summary()
@@ -102,6 +109,23 @@ def main():
 
             print(f"    ✓ Visualizations saved for {num_resp} responder(s)")
             print(f"    ✓ Total evacuation time: {sim.get_total_time():.2f} seconds")
+
+            # Run baseline comparisons
+            print(f"    Running baseline comparisons...")
+            _, naive_paths = naive_sequential_strategy(building, num_resp, walking_speed, visibility)
+            naive_time = max(time for _, time in naive_paths.values()) if naive_paths else 0
+
+            _, nn_paths = nearest_neighbor_only(building, num_resp, walking_speed, visibility)
+            nn_time = max(time for _, time in nn_paths.values()) if nn_paths else 0
+
+            our_time = sim.get_total_time()
+
+            print(f"      - Our algorithm: {our_time:.2f}s")
+            print(f"      - Nearest neighbor only: {nn_time:.2f}s")
+            print(f"      - Naive sequential: {naive_time:.2f}s")
+            if naive_time > 0:
+                improvement = ((naive_time - our_time) / naive_time * 100)
+                print(f"      - Improvement vs naive: {improvement:.1f}%")
 
         # Additional analysis plots
         print(f"\n  Generating comparison and sensitivity plots...")
@@ -137,11 +161,14 @@ def main():
         print(f"  - Total exits: {len(building.exits)}")
         print(f"  - Total edges: {len(building.edges)}")
 
-        # Get best times
+        # Get best times (using appropriate parameters for each scenario)
+        walking_speed = 1.0 if 'Scenario_3' in name else 1.5
+        visibility = 0.7 if 'Scenario_3' in name else 1.0
+
         best_times = {}
         for num_resp in [1, 2, 3, 4]:
             sim = EvacuationSimulation(building, num_resp)
-            sim.run()
+            sim.run(walking_speed=walking_speed, visibility=visibility)
             best_times[num_resp] = sim.get_total_time()
 
         print(f"  - Best time (1 responder): {best_times[1]:.2f}s")
@@ -166,4 +193,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Allow optional command-line argument for output directory
+    output_dir = sys.argv[1] if len(sys.argv) > 1 else '/mnt/user-data/outputs'
+    main(output_dir)

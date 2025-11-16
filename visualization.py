@@ -38,7 +38,9 @@ ACTIVITY_COLORS = {
 
 def create_graph_layout(building: BuildingGraph) -> Dict[str, Tuple[float, float]]:
     """
-    Create a layout for the building graph using NetworkX.
+    Create a layout for the building graph.
+
+    Uses explicit positions if available, otherwise falls back to spring layout.
 
     Args:
         building: BuildingGraph object
@@ -46,7 +48,11 @@ def create_graph_layout(building: BuildingGraph) -> Dict[str, Tuple[float, float
     Returns:
         Dictionary mapping node IDs to (x, y) positions
     """
-    # Create NetworkX graph
+    # Use explicit positions if available
+    if building.node_positions:
+        return building.node_positions.copy()
+
+    # Fallback to NetworkX spring layout
     G = nx.Graph()
 
     # Add nodes
@@ -54,6 +60,8 @@ def create_graph_layout(building: BuildingGraph) -> Dict[str, Tuple[float, float
         G.add_node(room_id)
     for exit_id in building.exits:
         G.add_node(exit_id)
+    for routing_id in building.routing_nodes:
+        G.add_node(routing_id)
 
     # Add edges
     for edge in building.edges:
@@ -85,24 +93,8 @@ def plot_floor_plan(building: BuildingGraph, scenario_name: str, output_dir: str
     # Create layout
     pos = create_graph_layout(building)
 
-    # Prepare node data
-    node_colors = []
-    node_sizes = []
-    node_shapes = []
-
-    all_nodes = list(building.rooms.keys()) + building.exits
-
-    for node in all_nodes:
-        room = building.get_room(node)
-        if room:
-            # Room node
-            node_colors.append(ROOM_TYPE_COLORS.get(room.type, '#95a5a6'))
-            sweep_time = room.calculate_sweep_time()
-            node_sizes.append(sweep_time * 10)  # Scale for visibility
-        else:
-            # Exit node
-            node_colors.append('#27ae60')
-            node_sizes.append(500)
+    # Prepare node lists
+    all_nodes = list(building.rooms.keys()) + building.exits + building.routing_nodes
 
     # Draw edges
     for edge in building.edges:
@@ -127,7 +119,7 @@ def plot_floor_plan(building: BuildingGraph, scenario_name: str, output_dir: str
                    bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
 
     # Draw nodes
-    for i, node in enumerate(all_nodes):
+    for node in all_nodes:
         if node not in pos:
             continue
 
@@ -136,19 +128,26 @@ def plot_floor_plan(building: BuildingGraph, scenario_name: str, output_dir: str
 
         if room:
             # Room node (circle)
-            circle = plt.Circle((x, y), radius=0.08, color=node_colors[i],
+            color = ROOM_TYPE_COLORS.get(room.type, '#95a5a6')
+            circle = plt.Circle((x, y), radius=0.08, color=color,
                               alpha=0.7, zorder=2)
             ax.add_patch(circle)
-            ax.text(x, y, node.replace('Office', 'O').replace('Classroom', 'C').replace('Lab', 'L'),
+            label = node.replace('Office', 'O').replace('Classroom', 'C').replace('Lab', 'L').replace('Storage', 'S')
+            ax.text(x, y, label,
                    fontsize=8, ha='center', va='center', fontweight='bold', zorder=3)
-        else:
-            # Exit node (square)
+        elif node in building.exits:
+            # Exit node (square, green)
             square = mpatches.Rectangle((x - 0.08, y - 0.08), 0.16, 0.16,
-                                       color=node_colors[i], alpha=0.8, zorder=2)
+                                       color='#27ae60', alpha=0.8, zorder=2)
             ax.add_patch(square)
             ax.text(x, y, node.replace('Exit', 'E'),
                    fontsize=8, ha='center', va='center', fontweight='bold',
                    color='white', zorder=3)
+        else:
+            # Routing node (small gray circle)
+            circle = plt.Circle((x, y), radius=0.04, color='#95a5a6',
+                              alpha=0.5, zorder=1)
+            ax.add_patch(circle)
 
     # Create legend
     legend_elements = [
@@ -196,7 +195,7 @@ def plot_cluster_assignment(
         for room_id in rooms:
             room_to_responder[room_id] = resp_id
 
-    all_nodes = list(building.rooms.keys()) + building.exits
+    all_nodes = list(building.rooms.keys()) + building.exits + building.routing_nodes
 
     # Draw edges (lighter)
     for edge in building.edges:
@@ -223,9 +222,10 @@ def plot_cluster_assignment(
 
             circle = plt.Circle((x, y), radius=0.08, color=color, alpha=0.7, zorder=2)
             ax.add_patch(circle)
-            ax.text(x, y, node.replace('Office', 'O').replace('Classroom', 'C').replace('Lab', 'L'),
+            label = node.replace('Office', 'O').replace('Classroom', 'C').replace('Lab', 'L').replace('Storage', 'S')
+            ax.text(x, y, label,
                    fontsize=8, ha='center', va='center', fontweight='bold', zorder=3)
-        else:
+        elif node in building.exits:
             # Exit node (square)
             square = mpatches.Rectangle((x - 0.08, y - 0.08), 0.16, 0.16,
                                        color='#27ae60', alpha=0.8, zorder=2)
@@ -233,6 +233,11 @@ def plot_cluster_assignment(
             ax.text(x, y, node.replace('Exit', 'E'),
                    fontsize=8, ha='center', va='center', fontweight='bold',
                    color='white', zorder=3)
+        else:
+            # Routing node (small gray circle)
+            circle = plt.Circle((x, y), radius=0.04, color='#95a5a6',
+                              alpha=0.5, zorder=1)
+            ax.add_patch(circle)
 
     # Create legend
     num_responders = len(assignments)
@@ -276,7 +281,7 @@ def plot_optimal_paths(
     # Create layout
     pos = create_graph_layout(building)
 
-    all_nodes = list(building.rooms.keys()) + building.exits
+    all_nodes = list(building.rooms.keys()) + building.exits + building.routing_nodes
 
     # Draw edges (very light)
     for edge in building.edges:
@@ -296,10 +301,14 @@ def plot_optimal_paths(
         if room:
             circle = plt.Circle((x, y), radius=0.06, color='#ecf0f1', alpha=0.5, zorder=1)
             ax.add_patch(circle)
-        else:
+        elif node in building.exits:
             square = mpatches.Rectangle((x - 0.06, y - 0.06), 0.12, 0.12,
                                        color='#27ae60', alpha=0.6, zorder=1)
             ax.add_patch(square)
+        else:
+            # Routing node
+            circle = plt.Circle((x, y), radius=0.03, color='#95a5a6', alpha=0.3, zorder=1)
+            ax.add_patch(circle)
 
     # Draw paths
     for resp_id, (path, _) in paths.items():

@@ -121,8 +121,10 @@ class BuildingGraph:
         """Initialize an empty building graph."""
         self.rooms: Dict[str, Room] = {}
         self.exits: List[str] = []
+        self.routing_nodes: List[str] = []  # Hallway junctions, stairs, etc.
         self.edges: List[Edge] = []
         self.adjacency_list: Dict[str, List[Tuple[str, Edge]]] = {}
+        self.node_positions: Dict[str, Tuple[float, float]] = {}  # Explicit positions for visualization
 
     def add_room(self, room: Room):
         """
@@ -146,6 +148,29 @@ class BuildingGraph:
             self.exits.append(exit_id)
         if exit_id not in self.adjacency_list:
             self.adjacency_list[exit_id] = []
+
+    def add_routing_node(self, node_id: str):
+        """
+        Add a routing node (hallway junction, stairs, etc.) to the building.
+
+        Args:
+            node_id: ID of the routing node
+        """
+        if node_id not in self.routing_nodes:
+            self.routing_nodes.append(node_id)
+        if node_id not in self.adjacency_list:
+            self.adjacency_list[node_id] = []
+
+    def set_node_position(self, node_id: str, x: float, y: float):
+        """
+        Set explicit position for a node (for visualization).
+
+        Args:
+            node_id: ID of the node
+            x: X coordinate
+            y: Y coordinate
+        """
+        self.node_positions[node_id] = (x, y)
 
     def add_edge(self, edge: Edge):
         """
@@ -180,9 +205,14 @@ class BuildingGraph:
 
         Returns:
             Tuple of (path as list of node IDs, total travel time)
+
+        Raises:
+            ValueError: If start or end nodes don't exist
         """
-        if start not in self.adjacency_list or end not in self.adjacency_list:
-            return ([], float('inf'))
+        if start not in self.adjacency_list:
+            raise ValueError(f"Start node '{start}' not found in building graph")
+        if end not in self.adjacency_list:
+            raise ValueError(f"End node '{end}' not found in building graph")
 
         if start == end:
             return ([start], 0.0)
@@ -222,7 +252,7 @@ class BuildingGraph:
 
         # Reconstruct path
         if distances[end] == float('inf'):
-            return ([], float('inf'))
+            raise ValueError(f"No path exists from '{start}' to '{end}'")
 
         path = []
         current = end
