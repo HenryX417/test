@@ -75,92 +75,91 @@ def create_graph_layout(building: BuildingGraph) -> Dict[str, Tuple[float, float
 
 def plot_floor_plan(building: BuildingGraph, scenario_name: str, output_dir: str = '/mnt/user-data/outputs'):
     """
-    Create clean graph visualization of building floor plan.
+    Create GRAPH-STYLE visualization (circles and squares connected by lines).
+
+    NOT an architectural floor plan - just nodes and edges.
+    Matches the clean, minimalist graph visualization style.
 
     Features:
-    - Nodes sized by sweep time
-    - Nodes colored by type
-    - Edge labels showing weights
-    - Exits clearly marked (square nodes)
+    - Rooms = hollow circles with black outlines
+    - Exits = hollow squares with black outlines
+    - Edges = straight black lines
+    - Clean labels (O1, O2, E1, E2)
+    - White background, no axes
 
     Args:
         building: BuildingGraph object
         scenario_name: Name for the scenario
         output_dir: Directory to save output
     """
-    fig, ax = plt.subplots(figsize=(14, 10))
+    fig, ax = plt.subplots(figsize=(12, 8))
 
-    # Create layout
+    # Get explicit positions (must be set in scenarios.py)
     pos = create_graph_layout(building)
 
-    # Prepare node lists
-    all_nodes = list(building.rooms.keys()) + building.exits + building.routing_nodes
-
-    # Draw edges
+    # Draw edges FIRST (so they appear behind nodes)
     for edge in building.edges:
         if edge.start in pos and edge.end in pos:
-            x_vals = [pos[edge.start][0], pos[edge.end][0]]
-            y_vals = [pos[edge.start][1], pos[edge.end][1]]
+            x1, y1 = pos[edge.start]
+            x2, y2 = pos[edge.end]
 
             # Different line styles for different edge types
             linestyle = '-'
             linewidth = 1.5
             if edge.edge_type == 'stair':
                 linestyle = '--'
-                linewidth = 2.5
+                linewidth = 2.0
 
-            ax.plot(x_vals, y_vals, 'k-', alpha=0.3, linestyle=linestyle, linewidth=linewidth)
+            ax.plot([x1, x2], [y1, y2], color='black', linewidth=linewidth,
+                   alpha=0.6, linestyle=linestyle, zorder=1)
 
-            # Add edge label (distance)
-            mid_x = (x_vals[0] + x_vals[1]) / 2
-            mid_y = (y_vals[0] + y_vals[1]) / 2
+            # Optional: add edge weight label at midpoint
+            mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
             ax.text(mid_x, mid_y, f'{edge.distance:.0f}m',
                    fontsize=7, ha='center', va='center',
-                   bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7))
+                   bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.8),
+                   zorder=2)
 
-    # Draw nodes
-    for node in all_nodes:
-        if node not in pos:
+    # Draw ROOM nodes (hollow circles)
+    for room_id, room in building.rooms.items():
+        if room_id not in pos:
             continue
 
-        x, y = pos[node]
-        room = building.get_room(node)
+        x, y = pos[room_id]
 
-        if room:
-            # Room node (circle)
-            color = ROOM_TYPE_COLORS.get(room.type, '#95a5a6')
-            circle = plt.Circle((x, y), radius=0.08, color=color,
-                              alpha=0.7, zorder=2)
-            ax.add_patch(circle)
-            label = node.replace('Office', 'O').replace('Classroom', 'C').replace('Lab', 'L').replace('Storage', 'S')
-            ax.text(x, y, label,
-                   fontsize=8, ha='center', va='center', fontweight='bold', zorder=3)
-        elif node in building.exits:
-            # Exit node (square, green)
-            square = mpatches.Rectangle((x - 0.08, y - 0.08), 0.16, 0.16,
-                                       color='#27ae60', alpha=0.8, zorder=2)
-            ax.add_patch(square)
-            ax.text(x, y, node.replace('Exit', 'E'),
-                   fontsize=8, ha='center', va='center', fontweight='bold',
-                   color='white', zorder=3)
-        else:
-            # Routing node (small gray circle)
-            circle = plt.Circle((x, y), radius=0.04, color='#95a5a6',
-                              alpha=0.5, zorder=1)
-            ax.add_patch(circle)
+        # Hollow circle with black outline
+        circle = plt.Circle((x, y), radius=0.08,
+                           facecolor='lightblue', edgecolor='black',
+                           linewidth=2, zorder=3)
+        ax.add_patch(circle)
 
-    # Create legend
-    legend_elements = [
-        mpatches.Patch(color=color, label=room_type.capitalize())
-        for room_type, color in ROOM_TYPE_COLORS.items()
-    ]
-    legend_elements.append(mpatches.Patch(color='#27ae60', label='Exit'))
+        # Room label (shortened)
+        short_label = room_id.replace('Office', 'O').replace('Classroom', 'C').replace('Lab', 'L').replace('Storage', 'S').replace('Daycare', 'D')
+        ax.text(x, y, short_label, fontsize=10, ha='center', va='center',
+               fontweight='bold', zorder=4)
 
-    ax.legend(handles=legend_elements, loc='upper right', fontsize=10)
+    # Draw EXIT nodes (hollow squares)
+    for exit_id in building.exits:
+        if exit_id not in pos:
+            continue
 
-    ax.set_title(f'Floor Plan - {scenario_name}', fontsize=16, fontweight='bold')
-    ax.axis('off')
+        x, y = pos[exit_id]
+
+        # Hollow square with black outline
+        square = mpatches.Rectangle((x - 0.08, y - 0.08), 0.16, 0.16,
+                                    facecolor='lightgreen', edgecolor='black',
+                                    linewidth=2, zorder=3)
+        ax.add_patch(square)
+
+        # Exit label (shortened)
+        exit_label = exit_id.replace('Exit', 'E')
+        ax.text(x, y, exit_label, fontsize=10, ha='center', va='center',
+               fontweight='bold', zorder=4)
+
+    # Formatting
     ax.set_aspect('equal')
+    ax.axis('off')
+    ax.set_title(f'Floor Plan - {scenario_name}', fontsize=14, fontweight='bold')
 
     plt.tight_layout()
     plt.savefig(f'{output_dir}/floor_plan_{scenario_name}.png', dpi=300, bbox_inches='tight')

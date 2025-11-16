@@ -12,22 +12,22 @@ def create_scenario1() -> BuildingGraph:
     """
     Create Scenario 1: Basic Single Floor.
 
-    Layout:
-         Exit1
-          |
-    [Off1][Off2][Off3]
-          |
-    [Off4][Off5][Off6]
-          |
-         Exit2
+    Layout (graph-style):
+                [Off1] [Off2] [Off3]
+                  |  \ / | \ /  |
+          Exit1 --+----+---+----+-- Exit2
+                  |  / \ | / \  |
+                [Off4] [Off5] [Off6]
 
     - 1 floor, 6 offices, 2 exits (8 nodes total)
     - All offices are identical (200 sq ft)
+    - Exits on left and right sides (vertically centered)
+    - Diagonal edges show high interconnectivity
     - NO hallway or junction nodes - direct edges only
     """
     building = BuildingGraph()
 
-    # Create 2 exits
+    # Create 2 exits (on left and right sides)
     building.add_exit('Exit1')
     building.add_exit('Exit2')
 
@@ -43,36 +43,47 @@ def create_scenario1() -> BuildingGraph:
         )
         building.add_room(room)
 
-    # Horizontal connections between adjacent offices (10m each)
+    # Horizontal connections - TOP ROW (10m each)
     building.add_edge(Edge('Office1', 'Office2', 10.0, 'corridor'))
     building.add_edge(Edge('Office2', 'Office3', 10.0, 'corridor'))
+
+    # Horizontal connections - BOTTOM ROW (10m each)
     building.add_edge(Edge('Office4', 'Office5', 10.0, 'corridor'))
     building.add_edge(Edge('Office5', 'Office6', 10.0, 'corridor'))
 
-    # Vertical connections between offices (crosses hallway, 15m each)
+    # Vertical connections - connecting rows (15m each)
     building.add_edge(Edge('Office1', 'Office4', 15.0, 'corridor'))
     building.add_edge(Edge('Office2', 'Office5', 15.0, 'corridor'))
     building.add_edge(Edge('Office3', 'Office6', 15.0, 'corridor'))
 
-    # Exit1 connects to top row offices
-    building.add_edge(Edge('Exit1', 'Office1', 12.0, 'hallway'))
-    building.add_edge(Edge('Exit1', 'Office2', 10.0, 'hallway'))
-    building.add_edge(Edge('Exit1', 'Office3', 12.0, 'hallway'))
+    # Diagonal connections - showing connectivity (18m each)
+    building.add_edge(Edge('Office1', 'Office5', 18.0, 'corridor'))
+    building.add_edge(Edge('Office2', 'Office4', 18.0, 'corridor'))
+    building.add_edge(Edge('Office2', 'Office6', 18.0, 'corridor'))
+    building.add_edge(Edge('Office3', 'Office5', 18.0, 'corridor'))
 
-    # Exit2 connects to bottom row offices
-    building.add_edge(Edge('Exit2', 'Office4', 12.0, 'hallway'))
-    building.add_edge(Edge('Exit2', 'Office5', 10.0, 'hallway'))
+    # Exit1 (left side) connections
+    building.add_edge(Edge('Exit1', 'Office1', 12.0, 'hallway'))
+    building.add_edge(Edge('Exit1', 'Office4', 12.0, 'hallway'))
+
+    # Exit2 (right side) connections
+    building.add_edge(Edge('Exit2', 'Office3', 12.0, 'hallway'))
     building.add_edge(Edge('Exit2', 'Office6', 12.0, 'hallway'))
 
-    # Set explicit positions for visualization
-    building.set_node_position('Exit1', 2, 3)
-    building.set_node_position('Office1', 1, 2)
-    building.set_node_position('Office2', 2, 2)
-    building.set_node_position('Office3', 3, 2)
-    building.set_node_position('Office4', 1, 0)
-    building.set_node_position('Office5', 2, 0)
-    building.set_node_position('Office6', 3, 0)
-    building.set_node_position('Exit2', 2, -1)
+    # Set explicit positions for graph-style visualization
+    # Top row (y = 2.0)
+    building.set_node_position('Office1', 1.0, 2.0)
+    building.set_node_position('Office2', 2.0, 2.0)
+    building.set_node_position('Office3', 3.0, 2.0)
+
+    # Bottom row (y = 0.0)
+    building.set_node_position('Office4', 1.0, 0.0)
+    building.set_node_position('Office5', 2.0, 0.0)
+    building.set_node_position('Office6', 3.0, 0.0)
+
+    # Exits (vertically centered on left and right)
+    building.set_node_position('Exit1', 0.0, 1.0)  # Left side
+    building.set_node_position('Exit2', 4.0, 1.0)  # Right side
 
     return building
 
