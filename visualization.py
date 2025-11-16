@@ -114,11 +114,14 @@ def plot_floor_plan(building: BuildingGraph, scenario_name: str, output_dir: str
                    alpha=0.6, linestyle=linestyle, zorder=1)
 
             # Optional: add edge weight label at midpoint
-            mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
-            ax.text(mid_x, mid_y, f'{edge.distance:.0f}m',
-                   fontsize=7, ha='center', va='center',
-                   bbox=dict(boxstyle='round,pad=0.2', facecolor='white', alpha=0.8),
-                   zorder=2)
+            # Only show if edge is long enough to avoid clutter
+            distance = ((x2-x1)**2 + (y2-y1)**2)**0.5
+            if distance > 0.5:  # Only label longer edges
+                mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
+                ax.text(mid_x, mid_y, f'{edge.distance:.0f}',
+                       fontsize=6, ha='center', va='center',
+                       bbox=dict(boxstyle='round,pad=0.15', facecolor='white', alpha=0.9, edgecolor='none'),
+                       zorder=2)
 
     # Draw ROOM nodes (hollow circles)
     for room_id, room in building.rooms.items():

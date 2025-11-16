@@ -167,8 +167,11 @@ def find_optimal_path(
 
     path.append(best_exit)
 
-    # Apply 2-opt improvement
+    # Apply TSP improvements: 2-opt followed by Or-opt for better local optima
     path = two_opt_improve(path, building, walking_speed)
+    path = or_opt_improve(path, building, walking_speed)
+    # Run 2-opt again in case Or-opt opened new opportunities
+    path = two_opt_improve(path, building, walking_speed, max_iterations=50)
 
     # Calculate total time
     total_time = calculate_path_time(path, building, walking_speed)
@@ -180,13 +183,14 @@ def two_opt_improve(
     path: List[str],
     building: BuildingGraph,
     walking_speed: float = 1.5,
-    max_iterations: int = 100
+    max_iterations: int = 200
 ) -> List[str]:
     """
     Apply 2-opt local search improvement to path.
 
     The 2-opt algorithm removes two edges and reconnects the path
-    in a different way to reduce total distance.
+    in a different way to reduce total distance. This version runs
+    more iterations for better convergence.
 
     Args:
         path: Current path (list of node IDs)
@@ -203,6 +207,7 @@ def two_opt_improve(
     improved = True
     iteration = 0
     best_path = path[:]
+    best_cost = calculate_path_distance(best_path, building, walking_speed)
 
     while improved and iteration < max_iterations:
         improved = False
@@ -212,16 +217,11 @@ def two_opt_improve(
             for j in range(i + 1, len(best_path) - 1):
                 # Try reversing segment [i:j+1]
                 new_path = best_path[:i] + best_path[i:j+1][::-1] + best_path[j+1:]
+                new_cost = calculate_path_distance(new_path, building, walking_speed)
 
-                # Calculate improvement
-                old_dist = (building.distance(best_path[i-1], best_path[i], walking_speed) +
-                           building.distance(best_path[j], best_path[j+1], walking_speed))
-
-                new_dist = (building.distance(new_path[i-1], new_path[i], walking_speed) +
-                           building.distance(new_path[j], new_path[j+1], walking_speed))
-
-                if new_dist < old_dist:
+                if new_cost < best_cost:
                     best_path = new_path
+                    best_cost = new_cost
                     improved = True
                     break
 
@@ -229,6 +229,102 @@ def two_opt_improve(
                 break
 
     return best_path
+
+
+def or_opt_improve(
+    path: List[str],
+    building: BuildingGraph,
+    walking_speed: float = 1.5,
+    max_iterations: int = 100
+) -> List[str]:
+    """
+    Apply Or-opt local search improvement to path.
+
+    Or-opt relocates a sequence of 1, 2, or 3 consecutive nodes to
+    a different position in the tour. This can find improvements
+    that 2-opt misses.
+
+    Args:
+        path: Current path (list of node IDs)
+        building: BuildingGraph object
+        walking_speed: Walking speed in m/s
+        max_iterations: Maximum number of improvement iterations
+
+    Returns:
+        Improved path
+    """
+    if len(path) <= 4:
+        return path
+
+    improved = True
+    iteration = 0
+    best_path = path[:]
+    best_cost = calculate_path_distance(best_path, building, walking_speed)
+
+    while improved and iteration < max_iterations:
+        improved = False
+        iteration += 1
+
+        # Try relocating sequences of length 1, 2, and 3
+        for seq_len in [1, 2, 3]:
+            if len(best_path) < seq_len + 3:  # Need enough nodes
+                continue
+
+            # Try removing each sequence and inserting elsewhere
+            for i in range(1, len(best_path) - seq_len):
+                sequence = best_path[i:i+seq_len]
+
+                # Remove the sequence
+                path_without = best_path[:i] + best_path[i+seq_len:]
+
+                # Try inserting at each position
+                for j in range(1, len(path_without)):
+                    if j == i or j == i-1:  # Skip original position
+                        continue
+
+                    # Insert sequence at position j
+                    new_path = path_without[:j] + sequence + path_without[j:]
+                    new_cost = calculate_path_distance(new_path, building, walking_speed)
+
+                    if new_cost < best_cost:
+                        best_path = new_path
+                        best_cost = new_cost
+                        improved = True
+                        break
+
+                if improved:
+                    break
+
+            if improved:
+                break
+
+    return best_path
+
+
+def calculate_path_distance(
+    path: List[str],
+    building: BuildingGraph,
+    walking_speed: float = 1.5
+) -> float:
+    """
+    Calculate total travel distance for a path (not including sweep times).
+
+    Args:
+        path: List of node IDs in order
+        building: BuildingGraph object
+        walking_speed: Walking speed in m/s
+
+    Returns:
+        Total travel time in seconds
+    """
+    if len(path) <= 1:
+        return 0.0
+
+    total = 0.0
+    for i in range(len(path) - 1):
+        total += building.distance(path[i], path[i+1], walking_speed)
+
+    return total
 
 
 def calculate_path_time(

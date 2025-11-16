@@ -90,24 +90,24 @@ def create_scenario1() -> BuildingGraph:
 
 def create_scenario2() -> BuildingGraph:
     """
-    Create Scenario 2: Two-Floor Mixed Use.
+    Create Scenario 2: School Building (Two Floors).
 
-    Layout (2 floors):
-    FLOOR 2:
-    [Off2_1][Off2_2][Off2_3][Off2_4]
-    [Stor1]                   [Stor2]
-
+    Layout:
     FLOOR 1:
-    [Class1][Class2][Class3]
-    [Off1_1] [Lab1]  [Off1_2]
-      ↕                ↕
-     Exit1           Exit2
+         O1 --- L1 --- O2
+    E1 --|      |       |-- E2
+         C1 --- S1 --- C2
 
-    - 2 floors, 12 rooms total, 2 exits (14 nodes total)
-    - Floor 1: 3 classrooms, 1 lab, 2 offices
-    - Floor 2: 4 offices, 2 storage rooms
-    - Stairs represented as edges with higher weights
-    - NO hallway or junction nodes - direct edges only
+    FLOOR 2 (above, connected via stairs):
+         C3 --- C5
+          |      |
+         C4 --- C6
+
+    - 2 floors, 10 rooms total, 2 exits (12 nodes)
+    - Floor 1: 2 offices, 1 lab, 2 classrooms, 1 storage
+    - Floor 2: 4 classrooms
+    - Stairs from exits to floor 2 (weighted heavily)
+    - School-like layout with central hub pattern
     """
     building = BuildingGraph()
 
@@ -115,108 +115,113 @@ def create_scenario2() -> BuildingGraph:
     building.add_exit('Exit1')
     building.add_exit('Exit2')
 
-    # Floor 1: 3 classrooms, 1 lab, 2 offices
+    # Floor 1 rooms
     floor1_rooms = [
+        Room('Office1', 'office', 200.0, 2, 'adults', 3),
+        Room('Lab1', 'lab', 600.0, 15, 'adults', 4),
+        Room('Office2', 'office', 200.0, 2, 'adults', 3),
         Room('Classroom1', 'classroom', 400.0, 25, 'adults', 4),
+        Room('Storage1', 'storage', 300.0, 0, 'adults', 2),
         Room('Classroom2', 'classroom', 400.0, 25, 'adults', 4),
-        Room('Classroom3', 'classroom', 400.0, 25, 'adults', 4),
-        Room('Lab1', 'lab', 600.0, 15, 'adults', 3),
-        Room('Office1_1', 'office', 200.0, 2, 'adults', 3),
-        Room('Office1_2', 'office', 200.0, 2, 'adults', 3),
     ]
 
     for room in floor1_rooms:
         building.add_room(room)
 
-    # Floor 2: 4 offices, 2 storage rooms
+    # Floor 2 rooms
     floor2_rooms = [
-        Room('Office2_1', 'office', 200.0, 2, 'adults', 3),
-        Room('Office2_2', 'office', 200.0, 2, 'adults', 3),
-        Room('Office2_3', 'office', 200.0, 2, 'adults', 3),
-        Room('Office2_4', 'office', 200.0, 2, 'adults', 3),
-        Room('Storage1', 'storage', 300.0, 0, 'adults', 2),
-        Room('Storage2', 'storage', 300.0, 0, 'adults', 2),
+        Room('Classroom3', 'classroom', 400.0, 25, 'adults', 4),
+        Room('Classroom4', 'classroom', 400.0, 25, 'adults', 4),
+        Room('Classroom5', 'classroom', 400.0, 25, 'adults', 4),
+        Room('Classroom6', 'classroom', 400.0, 25, 'adults', 4),
     ]
 
     for room in floor2_rooms:
         building.add_room(room)
 
+    # Floor 1: Horizontal connections (top row)
+    building.add_edge(Edge('Office1', 'Lab1', 10.0, 'corridor'))
+    building.add_edge(Edge('Lab1', 'Office2', 10.0, 'corridor'))
+
+    # Floor 1: Horizontal connections (bottom row)
+    building.add_edge(Edge('Classroom1', 'Storage1', 10.0, 'corridor'))
+    building.add_edge(Edge('Storage1', 'Classroom2', 10.0, 'corridor'))
+
     # Floor 1: Exit connections
+    building.add_edge(Edge('Exit1', 'Office1', 8.0, 'hallway'))
     building.add_edge(Edge('Exit1', 'Classroom1', 8.0, 'hallway'))
-    building.add_edge(Edge('Exit1', 'Office1_1', 8.0, 'hallway'))
-    building.add_edge(Edge('Exit1', 'Classroom2', 15.0, 'hallway'))
-    building.add_edge(Edge('Exit2', 'Classroom3', 8.0, 'hallway'))
-    building.add_edge(Edge('Exit2', 'Office1_2', 8.0, 'hallway'))
-    building.add_edge(Edge('Exit2', 'Lab1', 15.0, 'hallway'))
+    building.add_edge(Edge('Exit2', 'Office2', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit2', 'Classroom2', 8.0, 'hallway'))
 
-    # Floor 1: Room-to-room connections
-    building.add_edge(Edge('Classroom1', 'Classroom2', 12.0, 'corridor'))
-    building.add_edge(Edge('Classroom2', 'Classroom3', 12.0, 'corridor'))
-    building.add_edge(Edge('Office1_1', 'Lab1', 12.0, 'corridor'))
-    building.add_edge(Edge('Lab1', 'Office1_2', 12.0, 'corridor'))
-    building.add_edge(Edge('Classroom1', 'Office1_1', 10.0, 'corridor'))
-    building.add_edge(Edge('Classroom3', 'Office1_2', 10.0, 'corridor'))
+    # Floor 1: Cross connections
+    building.add_edge(Edge('Office1', 'Storage1', 12.0, 'corridor'))
+    building.add_edge(Edge('Lab1', 'Classroom1', 12.0, 'corridor'))
+    building.add_edge(Edge('Office2', 'Storage1', 12.0, 'corridor'))
+    building.add_edge(Edge('Classroom2', 'Lab1', 12.0, 'corridor'))
 
-    # Stair connections (Floor 1 to Floor 2) - heavy weight for stairs
-    building.add_edge(Edge('Office1_1', 'Storage1', 20.0, 'stair'))
-    building.add_edge(Edge('Office1_1', 'Office2_1', 20.0, 'stair'))
-    building.add_edge(Edge('Office1_2', 'Storage2', 20.0, 'stair'))
-    building.add_edge(Edge('Office1_2', 'Office2_4', 20.0, 'stair'))
+    # Floor 2: Grid connections
+    building.add_edge(Edge('Classroom3', 'Classroom5', 10.0, 'corridor'))
+    building.add_edge(Edge('Classroom4', 'Classroom6', 10.0, 'corridor'))
+    building.add_edge(Edge('Classroom3', 'Classroom4', 10.0, 'corridor'))
+    building.add_edge(Edge('Classroom5', 'Classroom6', 10.0, 'corridor'))
 
-    # Floor 2: Room-to-room connections
-    building.add_edge(Edge('Office2_1', 'Office2_2', 10.0, 'corridor'))
-    building.add_edge(Edge('Office2_2', 'Office2_3', 10.0, 'corridor'))
-    building.add_edge(Edge('Office2_3', 'Office2_4', 10.0, 'corridor'))
-    building.add_edge(Edge('Storage1', 'Office2_1', 8.0, 'corridor'))
-    building.add_edge(Edge('Storage2', 'Office2_4', 8.0, 'corridor'))
-    building.add_edge(Edge('Storage1', 'Office2_2', 15.0, 'corridor'))
-    building.add_edge(Edge('Storage2', 'Office2_3', 15.0, 'corridor'))
+    # Floor 2: Diagonal connections for interconnectivity
+    building.add_edge(Edge('Classroom3', 'Classroom6', 14.0, 'corridor'))
+    building.add_edge(Edge('Classroom4', 'Classroom5', 14.0, 'corridor'))
+
+    # Stair connections (exits to floor 2) - heavy weight (25m for stairs)
+    building.add_edge(Edge('Exit1', 'Classroom3', 25.0, 'stair'))
+    building.add_edge(Edge('Exit1', 'Classroom4', 25.0, 'stair'))
+    building.add_edge(Edge('Exit2', 'Classroom5', 25.0, 'stair'))
+    building.add_edge(Edge('Exit2', 'Classroom6', 25.0, 'stair'))
 
     # Set explicit positions for visualization
-    # Exits
-    building.set_node_position('Exit1', 0, 0)
-    building.set_node_position('Exit2', 6, 0)
+    # Exits (on left and right)
+    building.set_node_position('Exit1', 0.0, 1.0)
+    building.set_node_position('Exit2', 4.0, 1.0)
 
-    # Floor 1 rooms (y=0 to 1)
-    building.set_node_position('Classroom1', 1, 1)
-    building.set_node_position('Classroom2', 3, 1)
-    building.set_node_position('Classroom3', 5, 1)
-    building.set_node_position('Office1_1', 1, -1)
-    building.set_node_position('Lab1', 3, -1)
-    building.set_node_position('Office1_2', 5, -1)
+    # Floor 1 - Top row (y=2)
+    building.set_node_position('Office1', 1.0, 2.0)
+    building.set_node_position('Lab1', 2.0, 2.0)
+    building.set_node_position('Office2', 3.0, 2.0)
 
-    # Floor 2 rooms (y=2.5 to 3.5)
-    building.set_node_position('Storage1', 1, 2.5)
-    building.set_node_position('Office2_1', 1.5, 3.5)
-    building.set_node_position('Office2_2', 2.5, 3.5)
-    building.set_node_position('Office2_3', 3.5, 3.5)
-    building.set_node_position('Office2_4', 4.5, 3.5)
-    building.set_node_position('Storage2', 5, 2.5)
+    # Floor 1 - Bottom row (y=0)
+    building.set_node_position('Classroom1', 1.0, 0.0)
+    building.set_node_position('Storage1', 2.0, 0.0)
+    building.set_node_position('Classroom2', 3.0, 0.0)
+
+    # Floor 2 - Left column (x=1, high y for separation)
+    building.set_node_position('Classroom3', 1.0, 4.5)
+    building.set_node_position('Classroom4', 1.0, 3.5)
+
+    # Floor 2 - Right column (x=3, high y)
+    building.set_node_position('Classroom5', 3.0, 4.5)
+    building.set_node_position('Classroom6', 3.0, 3.5)
 
     return building
 
 
 def create_scenario3() -> BuildingGraph:
     """
-    Create Scenario 3: Single-Floor High-Density Office.
+    Create Scenario 3: Multi-Exit Office Complex.
 
-    Layout (grid):
-    Exit1 --- [Off1][Off2][Off3] --- Exit2
-               |     |     |
-              [Off4][Off5][Off6]
-               |     |     |
-    Exit3 --- [Off7][Off8][Off9] --- Exit4
-                     |
-                  [Off10]
+    Layout (4x3 grid with storage rooms):
+         O1 --- S1 --- O2
+    E1 --|      |       |-- E2
+         O3 --- O4 --- O5
+          |      |       |
+         O6 --- O7 --- O8
+    E3 --|      |       |-- E4
+         O9 --- S2 --- O10
 
-    - 1 floor, 10 offices, 4 exits (14 nodes total)
-    - All offices, highly interconnected grid layout
-    - Demonstrates sensitivity to constraints
-    - NO hallway or junction nodes - direct edges only
+    - 1 floor, 10 offices, 2 storage rooms, 4 exits (16 nodes total)
+    - Highly interconnected grid with multiple egress points
+    - Demonstrates optimization with many exit options
+    - Varied room sizes and weights
     """
     building = BuildingGraph()
 
-    # Create 4 exits
+    # Create 4 exits (on all four sides)
     building.add_exit('Exit1')
     building.add_exit('Exit2')
     building.add_exit('Exit3')
@@ -226,87 +231,111 @@ def create_scenario3() -> BuildingGraph:
     offices = [
         Room('Office1', 'office', 180.0, 2, 'adults', 3),
         Room('Office2', 'office', 200.0, 2, 'adults', 3),
-        Room('Office3', 'office', 220.0, 3, 'adults', 3),
-        Room('Office4', 'office', 190.0, 2, 'adults', 3),
-        Room('Office5', 'office', 250.0, 3, 'adults', 4),  # Larger, higher priority
-        Room('Office6', 'office', 200.0, 2, 'adults', 3),
-        Room('Office7', 'office', 180.0, 2, 'adults', 3),
-        Room('Office8', 'office', 210.0, 2, 'adults', 3),
-        Room('Office9', 'office', 200.0, 2, 'adults', 3),
-        Room('Office10', 'office', 150.0, 1, 'adults', 2),
+        Room('Office3', 'office', 190.0, 2, 'adults', 3),
+        Room('Office4', 'office', 220.0, 3, 'adults', 4),  # Larger, central
+        Room('Office5', 'office', 200.0, 2, 'adults', 3),
+        Room('Office6', 'office', 180.0, 2, 'adults', 3),
+        Room('Office7', 'office', 210.0, 2, 'adults', 3),
+        Room('Office8', 'office', 200.0, 2, 'adults', 3),
+        Room('Office9', 'office', 180.0, 2, 'adults', 3),
+        Room('Office10', 'office', 200.0, 2, 'adults', 3),
     ]
 
     for office in offices:
         building.add_room(office)
 
-    # Exit connections - direct to nearby offices
-    building.add_edge(Edge('Exit1', 'Office1', 7.0, 'hallway'))
-    building.add_edge(Edge('Exit1', 'Office4', 10.0, 'hallway'))
-    building.add_edge(Edge('Exit1', 'Office7', 14.0, 'hallway'))
+    # Create 2 storage rooms
+    storage_rooms = [
+        Room('Storage1', 'storage', 300.0, 0, 'adults', 2),
+        Room('Storage2', 'storage', 300.0, 0, 'adults', 2),
+    ]
 
-    building.add_edge(Edge('Exit2', 'Office3', 7.0, 'hallway'))
-    building.add_edge(Edge('Exit2', 'Office6', 10.0, 'hallway'))
-    building.add_edge(Edge('Exit2', 'Office9', 14.0, 'hallway'))
+    for storage in storage_rooms:
+        building.add_room(storage)
 
-    building.add_edge(Edge('Exit3', 'Office7', 7.0, 'hallway'))
-    building.add_edge(Edge('Exit3', 'Office4', 14.0, 'hallway'))
-    building.add_edge(Edge('Exit3', 'Office1', 18.0, 'hallway'))
+    # Row 1 (top): O1 --- S1 --- O2
+    building.add_edge(Edge('Office1', 'Storage1', 10.0, 'corridor'))
+    building.add_edge(Edge('Storage1', 'Office2', 10.0, 'corridor'))
 
-    building.add_edge(Edge('Exit4', 'Office9', 7.0, 'hallway'))
-    building.add_edge(Edge('Exit4', 'Office6', 14.0, 'hallway'))
-    building.add_edge(Edge('Exit4', 'Office3', 18.0, 'hallway'))
-
-    # Horizontal connections between adjacent offices (10m each)
-    building.add_edge(Edge('Office1', 'Office2', 10.0, 'corridor'))
-    building.add_edge(Edge('Office2', 'Office3', 10.0, 'corridor'))
+    # Row 2: O3 --- O4 --- O5
+    building.add_edge(Edge('Office3', 'Office4', 10.0, 'corridor'))
     building.add_edge(Edge('Office4', 'Office5', 10.0, 'corridor'))
-    building.add_edge(Edge('Office5', 'Office6', 10.0, 'corridor'))
-    building.add_edge(Edge('Office7', 'Office8', 10.0, 'corridor'))
-    building.add_edge(Edge('Office8', 'Office9', 10.0, 'corridor'))
 
-    # Vertical connections between offices (10m each)
-    building.add_edge(Edge('Office1', 'Office4', 10.0, 'corridor'))
-    building.add_edge(Edge('Office4', 'Office7', 10.0, 'corridor'))
-    building.add_edge(Edge('Office2', 'Office5', 10.0, 'corridor'))
-    building.add_edge(Edge('Office5', 'Office8', 10.0, 'corridor'))
+    # Row 3: O6 --- O7 --- O8
+    building.add_edge(Edge('Office6', 'Office7', 10.0, 'corridor'))
+    building.add_edge(Edge('Office7', 'Office8', 10.0, 'corridor'))
+
+    # Row 4 (bottom): O9 --- S2 --- O10
+    building.add_edge(Edge('Office9', 'Storage2', 10.0, 'corridor'))
+    building.add_edge(Edge('Storage2', 'Office10', 10.0, 'corridor'))
+
+    # Vertical connections (column by column)
+    building.add_edge(Edge('Office1', 'Office3', 10.0, 'corridor'))
     building.add_edge(Edge('Office3', 'Office6', 10.0, 'corridor'))
     building.add_edge(Edge('Office6', 'Office9', 10.0, 'corridor'))
 
-    # Office 10 connections (southern extension below Office8)
-    building.add_edge(Edge('Office8', 'Office10', 8.0, 'corridor'))
+    building.add_edge(Edge('Storage1', 'Office4', 10.0, 'corridor'))
+    building.add_edge(Edge('Office4', 'Office7', 10.0, 'corridor'))
+    building.add_edge(Edge('Office7', 'Storage2', 10.0, 'corridor'))
+
+    building.add_edge(Edge('Office2', 'Office5', 10.0, 'corridor'))
+    building.add_edge(Edge('Office5', 'Office8', 10.0, 'corridor'))
+    building.add_edge(Edge('Office8', 'Office10', 10.0, 'corridor'))
+
+    # Exit connections (as specified)
+    building.add_edge(Edge('Exit1', 'Office1', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit1', 'Office3', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit1', 'Office4', 12.0, 'hallway'))
+
+    building.add_edge(Edge('Exit2', 'Office2', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit2', 'Office5', 8.0, 'hallway'))
+
+    building.add_edge(Edge('Exit3', 'Office6', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit3', 'Office9', 8.0, 'hallway'))
+
+    building.add_edge(Edge('Exit4', 'Office8', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit4', 'Office10', 8.0, 'hallway'))
+
+    # Additional cross connections for high interconnectivity
+    building.add_edge(Edge('Office3', 'Storage1', 12.0, 'corridor'))
+    building.add_edge(Edge('Storage1', 'Office5', 12.0, 'corridor'))
+    building.add_edge(Edge('Office2', 'Office4', 12.0, 'corridor'))
+
+    building.add_edge(Edge('Office3', 'Office7', 12.0, 'corridor'))
+    building.add_edge(Edge('Office4', 'Office6', 12.0, 'corridor'))
+    building.add_edge(Edge('Office4', 'Office8', 12.0, 'corridor'))
+    building.add_edge(Edge('Office5', 'Office7', 12.0, 'corridor'))
+
+    building.add_edge(Edge('Office6', 'Storage2', 12.0, 'corridor'))
+    building.add_edge(Edge('Office7', 'Office9', 12.0, 'corridor'))
     building.add_edge(Edge('Office7', 'Office10', 12.0, 'corridor'))
-    building.add_edge(Edge('Office9', 'Office10', 12.0, 'corridor'))
-    building.add_edge(Edge('Office5', 'Office10', 12.0, 'corridor'))
+    building.add_edge(Edge('Office8', 'Storage2', 12.0, 'corridor'))
 
-    # Diagonal connections for high interconnectivity
-    building.add_edge(Edge('Office1', 'Office5', 14.0, 'corridor'))
-    building.add_edge(Edge('Office3', 'Office5', 14.0, 'corridor'))
-    building.add_edge(Edge('Office5', 'Office7', 14.0, 'corridor'))
-    building.add_edge(Edge('Office5', 'Office9', 14.0, 'corridor'))
+    # Set explicit positions for visualization
+    # Exits on left and right edges, vertically spaced
+    building.set_node_position('Exit1', 0.0, 2.5)
+    building.set_node_position('Exit2', 4.0, 2.5)
+    building.set_node_position('Exit3', 0.0, 0.5)
+    building.set_node_position('Exit4', 4.0, 0.5)
 
-    # Set explicit positions for visualization (grid layout)
-    # Exits at corners
-    building.set_node_position('Exit1', 0, 2)
-    building.set_node_position('Exit2', 4, 2)
-    building.set_node_position('Exit3', 0, 0)
-    building.set_node_position('Exit4', 4, 0)
+    # Row 1 (top, y=3)
+    building.set_node_position('Office1', 1.0, 3.0)
+    building.set_node_position('Storage1', 2.0, 3.0)
+    building.set_node_position('Office2', 3.0, 3.0)
 
-    # Top row offices (y=2)
-    building.set_node_position('Office1', 1, 2)
-    building.set_node_position('Office2', 2, 2)
-    building.set_node_position('Office3', 3, 2)
+    # Row 2 (y=2)
+    building.set_node_position('Office3', 1.0, 2.0)
+    building.set_node_position('Office4', 2.0, 2.0)
+    building.set_node_position('Office5', 3.0, 2.0)
 
-    # Middle row offices (y=1)
-    building.set_node_position('Office4', 1, 1)
-    building.set_node_position('Office5', 2, 1)
-    building.set_node_position('Office6', 3, 1)
+    # Row 3 (y=1)
+    building.set_node_position('Office6', 1.0, 1.0)
+    building.set_node_position('Office7', 2.0, 1.0)
+    building.set_node_position('Office8', 3.0, 1.0)
 
-    # Bottom row offices (y=0)
-    building.set_node_position('Office7', 1, 0)
-    building.set_node_position('Office8', 2, 0)
-    building.set_node_position('Office9', 3, 0)
-
-    # Office 10 at bottom center (southern extension)
-    building.set_node_position('Office10', 2, -0.8)
+    # Row 4 (bottom, y=0)
+    building.set_node_position('Office9', 1.0, 0.0)
+    building.set_node_position('Storage2', 2.0, 0.0)
+    building.set_node_position('Office10', 3.0, 0.0)
 
     return building

@@ -20,6 +20,23 @@ class Room:
     occupant_type: str  # 'adults', 'children', 'mixed'
     priority: int  # 1-5, higher = more urgent
 
+    # EXTENSIBILITY: Add custom metadata for advanced features (Part 4+)
+    # Examples: is_on_fire, has_gas_leak, is_blocked, temperature, smoke_density
+    metadata: Dict = None
+
+    def __post_init__(self):
+        """Initialize metadata dictionary if not provided."""
+        if self.metadata is None:
+            self.metadata = {}
+
+    def set_metadata(self, key: str, value):
+        """Set custom metadata for this room."""
+        self.metadata[key] = value
+
+    def get_metadata(self, key: str, default=None):
+        """Get custom metadata value."""
+        return self.metadata.get(key, default)
+
     def calculate_sweep_time(self, visibility: float = 1.0) -> float:
         """
         Calculate sweep time based on room type, size, and visibility.
@@ -125,6 +142,19 @@ class BuildingGraph:
         self.edges: List[Edge] = []
         self.adjacency_list: Dict[str, List[Tuple[str, Edge]]] = {}
         self.node_positions: Dict[str, Tuple[float, float]] = {}  # Explicit positions for visualization
+
+        # EXTENSIBILITY: Global features for advanced scenarios (Part 4+)
+        # Examples: disaster_type='fire'/'gas'/'earthquake', alarm_triggered=True,
+        #           sprinkler_active=True, emergency_lighting=False
+        self.features: Dict = {}
+
+    def set_feature(self, key: str, value):
+        """Set a global building feature."""
+        self.features[key] = value
+
+    def get_feature(self, key: str, default=None):
+        """Get a global building feature."""
+        return self.features.get(key, default)
 
     def add_room(self, room: Room):
         """
