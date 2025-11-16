@@ -16,7 +16,8 @@ def assign_rooms_to_responders(
     building: BuildingGraph,
     num_responders: int,
     walking_speed: float = 1.5,
-    visibility: float = 1.0
+    visibility: float = 1.0,
+    use_priority: bool = False
 ) -> Dict[int, List[str]]:
     """
     Assign rooms to responders to balance workload using greedy algorithm.
@@ -28,11 +29,16 @@ def assign_rooms_to_responders(
        b. Find nearest unassigned room to responder's current position
        c. Assign room, update workload and position
 
+    Priority Mode (use_priority=True, for Part 4 extensions):
+    - High-priority rooms are considered first in assignment
+    - Still uses workload balancing, but prioritizes critical rooms
+
     Args:
         building: BuildingGraph object
         num_responders: Number of responders
         walking_speed: Walking speed in m/s
         visibility: Visibility factor (0.0 to 1.0)
+        use_priority: If True, assign high-priority rooms first (default: False)
 
     Returns:
         Dictionary mapping responder_id to list of assigned room IDs
@@ -50,7 +56,16 @@ def assign_rooms_to_responders(
         responder_workloads[i] = 0.0
 
     # Get all rooms to assign
-    unassigned_rooms = set(building.get_all_room_ids())
+    if use_priority:
+        # PART 4 EXTENSION: Sort rooms by priority (high to low) for disaster scenarios
+        # This ensures critical rooms (daycare, labs) are assigned first
+        all_rooms = [(rid, building.get_room(rid).priority)
+                     for rid in building.get_all_room_ids()]
+        all_rooms.sort(key=lambda x: x[1], reverse=True)
+        unassigned_rooms = [rid for rid, _ in all_rooms]  # Ordered list
+    else:
+        # PARTS 1-3: Standard approach without priority considerations
+        unassigned_rooms = list(building.get_all_room_ids())
 
     # Greedy assignment
     while unassigned_rooms:
@@ -73,7 +88,12 @@ def assign_rooms_to_responders(
 
         # Assign room to responder
         assignments[min_responder].append(nearest_room)
-        unassigned_rooms.remove(nearest_room)
+
+        # Remove from unassigned (works for both list and set)
+        if isinstance(unassigned_rooms, list):
+            unassigned_rooms.remove(nearest_room)
+        else:
+            unassigned_rooms.remove(nearest_room)
 
         # Update responder's position and workload
         responder_positions[min_responder] = nearest_room
