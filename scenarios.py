@@ -490,6 +490,213 @@ def create_scenario4() -> BuildingGraph:
     return building
 
 
+def create_scenario5() -> BuildingGraph:
+    """
+    Create Scenario 5: L-Shaped Community Center (Non-Standard Layout).
+
+    **PART 4 EXTENSION: Non-Standard Building Layout**
+
+    This scenario demonstrates algorithm robustness on irregular floor plans
+    that deviate from typical rectangular grid structures.
+
+    Layout (L-shaped):
+         G1 ========== G2
+         ||            ||
+    E1 --O1 -- C1 -- C2 -- O2
+         ||    ||    ||
+         O3 -- DC -- C3
+               ||
+         [S1]-[S2]  (dead end)
+
+    Building Features (stresses algorithm):
+    - L-SHAPED floor plan (not rectangular)
+    - DEAD-END corridor: Storage rooms S1, S2 (must backtrack)
+    - ROOM-THROUGH-ROOM: Daycare (DC) only accessible through Office3
+    - UNEQUAL EXITS: Both exits clustered on west side
+    - LARGE ROOMS: 2 gymnasiums (800 sq ft each, slow sweeps)
+    - LONG CORRIDORS: Some edges 35m+ (significant travel time)
+    - MIX OF SIZES: Gymnasiums vs small offices
+
+    Total: 12 rooms, 2 exits, 1 floor
+
+    Room Types:
+    - 2 Gymnasiums (G1, G2) - very large (800 sq ft)
+    - 1 Daycare (DC) - accessible only through Office3 (bottleneck)
+    - 4 Classrooms (C1, C2, C3, and implicit in layout)
+    - 3 Offices (O1, O2, O3)
+    - 2 Storage rooms (S1, S2) - dead-end corridor
+
+    Priority Assignments:
+    - Daycare: Priority 5 (young children, bottleneck access)
+    - Gymnasiums: Priority 4 (high occupancy, large area)
+    - Classrooms: Priority 3 (standard)
+    - Offices: Priority 2 (low occupancy)
+    - Storage: Priority 1 (unoccupied)
+
+    Algorithm Challenges:
+    - Handles asymmetric topology (L-shape not grid)
+    - Optimizes dead-end routes (storage corridor)
+    - Routes through room-behind-room (Daycare via Office3)
+    - Balances long corridors vs direct paths
+    - Manages unequal exit distribution
+
+    This demonstrates real-world building complexity beyond idealized grids.
+    """
+    building = BuildingGraph()
+
+    # Set building features
+    building.set_feature('layout_type', 'L-shaped')
+    building.set_feature('floors', 1)
+    building.set_feature('irregular', True)
+
+    # Create 2 exits (both on west side - unequal distribution)
+    building.add_exit('Exit1')
+    building.add_exit('Exit2')
+
+    # ========================================================================
+    # GYMNASIUM WING (Top of L)
+    # ========================================================================
+    gym1 = Room('Gym1', 'gymnasium', 800.0, 50, 'adults', 4)
+    gym1.set_metadata('wing', 'north')
+    gym1.set_metadata('occupancy_type', 'high_density')
+    building.add_room(gym1)
+
+    gym2 = Room('Gym2', 'gymnasium', 800.0, 50, 'adults', 4)
+    gym2.set_metadata('wing', 'north')
+    gym2.set_metadata('occupancy_type', 'high_density')
+    building.add_room(gym2)
+
+    # ========================================================================
+    # MAIN CORRIDOR (Horizontal part of L)
+    # ========================================================================
+    office1 = Room('Office1', 'office', 180.0, 2, 'adults', 2)
+    office1.set_metadata('wing', 'west')
+    building.add_room(office1)
+
+    classroom1 = Room('Classroom1', 'classroom', 400.0, 25, 'adults', 3)
+    classroom1.set_metadata('wing', 'central')
+    building.add_room(classroom1)
+
+    classroom2 = Room('Classroom2', 'classroom', 400.0, 25, 'adults', 3)
+    classroom2.set_metadata('wing', 'central')
+    building.add_room(classroom2)
+
+    office2 = Room('Office2', 'office', 200.0, 3, 'adults', 2)
+    office2.set_metadata('wing', 'east')
+    building.add_room(office2)
+
+    # ========================================================================
+    # SOUTHERN WING (Vertical part of L)
+    # ========================================================================
+    office3 = Room('Office3', 'office', 180.0, 2, 'adults', 2)
+    office3.set_metadata('wing', 'south')
+    building.add_room(office3)
+
+    # CRITICAL: Daycare accessible ONLY through Office3 (bottleneck)
+    daycare = Room('Daycare', 'daycare', 500.0, 20, 'children', 5)
+    daycare.set_metadata('wing', 'south')
+    daycare.set_metadata('access', 'through_office3')
+    daycare.set_metadata('occupant_age', 'toddler')
+    building.add_room(daycare)
+
+    classroom3 = Room('Classroom3', 'classroom', 400.0, 20, 'adults', 3)
+    classroom3.set_metadata('wing', 'south')
+    building.add_room(classroom3)
+
+    # ========================================================================
+    # DEAD-END STORAGE CORRIDOR (Bottom of L)
+    # ========================================================================
+    storage1 = Room('Storage1', 'storage', 250.0, 0, 'adults', 1)
+    storage1.set_metadata('wing', 'south')
+    storage1.set_metadata('corridor_type', 'dead_end')
+    building.add_room(storage1)
+
+    storage2 = Room('Storage2', 'storage', 250.0, 0, 'adults', 1)
+    storage2.set_metadata('wing', 'south')
+    storage2.set_metadata('corridor_type', 'dead_end')
+    building.add_room(storage2)
+
+    # ========================================================================
+    # EDGES - GYMNASIUM WING (very long corridor)
+    # ========================================================================
+    # Gym1 to Gym2 is a VERY long hallway (35m)
+    building.add_edge(Edge('Gym1', 'Gym2', 35.0, 'corridor'))
+
+    # Gyms connect to main corridor through Office1
+    building.add_edge(Edge('Gym1', 'Office1', 15.0, 'corridor'))
+    building.add_edge(Edge('Gym2', 'Office1', 20.0, 'corridor'))  # Longer path from Gym2
+
+    # ========================================================================
+    # EDGES - MAIN CORRIDOR (Horizontal)
+    # ========================================================================
+    building.add_edge(Edge('Office1', 'Classroom1', 12.0, 'corridor'))
+    building.add_edge(Edge('Classroom1', 'Classroom2', 12.0, 'corridor'))
+    building.add_edge(Edge('Classroom2', 'Office2', 12.0, 'corridor'))
+
+    # ========================================================================
+    # EDGES - SOUTHERN WING (Vertical part of L)
+    # ========================================================================
+    # Connection from main corridor down to south wing
+    building.add_edge(Edge('Classroom1', 'Office3', 15.0, 'corridor'))
+    building.add_edge(Edge('Classroom2', 'Classroom3', 15.0, 'corridor'))
+
+    # Southern wing internal connections
+    building.add_edge(Edge('Office3', 'Daycare', 10.0, 'corridor'))
+    building.add_edge(Edge('Daycare', 'Classroom3', 12.0, 'corridor'))
+
+    # CRITICAL: Daycare is ONLY accessible through Office3
+    # (no direct connection from Classroom3 to Daycare in layout)
+    # This creates a bottleneck that algorithm must handle
+
+    # ========================================================================
+    # EDGES - DEAD-END STORAGE CORRIDOR
+    # ========================================================================
+    # Dead end: Daycare -> Storage1 -> Storage2 (must backtrack)
+    building.add_edge(Edge('Daycare', 'Storage1', 18.0, 'corridor'))
+    building.add_edge(Edge('Storage1', 'Storage2', 10.0, 'corridor'))
+    # No other connections - this is a TRUE dead end
+
+    # ========================================================================
+    # EXIT CONNECTIONS (both on west side - unequal)
+    # ========================================================================
+    # Exit1 connects to gymnasium wing
+    building.add_edge(Edge('Exit1', 'Gym1', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit1', 'Office1', 8.0, 'hallway'))
+
+    # Exit2 connects to southern wing
+    building.add_edge(Edge('Exit2', 'Office3', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit2', 'Classroom1', 10.0, 'hallway'))
+
+    # ========================================================================
+    # SET POSITIONS FOR VISUALIZATION (L-shape)
+    # ========================================================================
+
+    # Exits (both on left/west side)
+    building.set_node_position('Exit1', 0.0, 3.0)
+    building.set_node_position('Exit2', 0.0, 1.0)
+
+    # Gymnasium wing (top horizontal bar of L)
+    building.set_node_position('Gym1', 1.0, 4.0)
+    building.set_node_position('Gym2', 3.5, 4.0)
+
+    # Main corridor (middle horizontal)
+    building.set_node_position('Office1', 1.0, 3.0)
+    building.set_node_position('Classroom1', 2.0, 3.0)
+    building.set_node_position('Classroom2', 3.0, 3.0)
+    building.set_node_position('Office2', 4.0, 3.0)
+
+    # Southern wing (vertical part of L)
+    building.set_node_position('Office3', 1.0, 2.0)
+    building.set_node_position('Daycare', 2.0, 2.0)
+    building.set_node_position('Classroom3', 3.0, 2.0)
+
+    # Dead-end storage corridor (bottom)
+    building.set_node_position('Storage1', 2.0, 1.0)
+    building.set_node_position('Storage2', 2.0, 0.0)
+
+    return building
+
+
 def create_scenario6() -> BuildingGraph:
     """
     Create Scenario 6: Office Building with Active Chemical Lab Fire.
@@ -751,5 +958,270 @@ def create_scenario6() -> BuildingGraph:
     # Floor 2 bottom row (y=4)
     building.set_node_position('Office4', 1.0, 4.0)
     building.set_node_position('Office5', 2.5, 4.0)
+
+    return building
+
+
+def create_scenario7() -> BuildingGraph:
+    """
+    Create Scenario 7: Hospital with Odorless Gas Leak.
+
+    **PART 4 EXTENSION: Gas Emergency with Unaware Occupants**
+
+    Emergency Context:
+        Natural gas leak in basement mechanical room. Gas is odorless
+        (no mercaptan added). Slowly spreading through ventilation system.
+        Occupants are unaware of danger and may resist evacuation.
+
+    Building: 2 floors, 12 rooms, 2 exits (14 nodes total)
+
+    Emergency Conditions:
+        - Gas source: Basement Mechanical Room (not directly accessible)
+        - Gas-affected zones: Increasing concentrations by floor/proximity
+        - NO impassable rooms (gas is invisible, can traverse all areas)
+        - Occupants UNAWARE (increases sweep time by 50%)
+        - Some patients bedridden (slow evacuation assistance needed)
+        - Priority: Intensive care > Patient rooms > Staff areas
+
+    Layout:
+    FLOOR 2 (Upper):
+         ICU1 ---- ICU2 ---- Nurse
+          |         |         |
+    E1 --Lab ------ OR ----- Lounge-- E2
+
+    FLOOR 1 (Ground - gas spreading):
+         PR1 ----- PR2 ----- Admin
+          |         |         |
+         Pharm --- Lobby --- Storage
+
+    GAS CONCENTRATION ZONES:
+        - Floor 1 (ground): HIGH gas (near basement source)
+        - Floor 2 (upper): MEDIUM gas (via ventilation)
+        - Stairwells: Gas rising (moderate concentration)
+
+    Priority Assignments (medical emergency):
+        - Priority 5: ICU rooms (critical patients, life support)
+        - Priority 4: Operating Room, Patient Rooms (occupied)
+        - Priority 3: Nurse station, Pharmacy (staff present)
+        - Priority 2: Lounge, Admin, Lab (low occupancy)
+        - Priority 1: Storage (unoccupied)
+
+    Rooms:
+        - 2 ICU rooms (Intensive Care Units) - priority 5
+        - 1 Operating Room - priority 4
+        - 2 Patient Rooms - priority 4
+        - 1 Pharmacy - priority 3
+        - 1 Nurse Station - priority 3
+        - 1 Lab - priority 2
+        - 1 Lounge - priority 2
+        - 1 Admin - priority 2
+        - 1 Lobby - priority 2
+        - 1 Storage - priority 1
+
+    Key Differences from Fire Scenario:
+        - ALL rooms are passable (gas is invisible/traversable)
+        - Sweep times INCREASED (must convince unaware occupants)
+        - NO blocked paths (can use all routes)
+        - Environmental hazard: Gas concentration affects responder safety
+        - Focus on PRIORITY evacuation (ICU patients at highest risk)
+
+    This demonstrates:
+        - Occupant awareness modeling (unaware = longer sweeps)
+        - Invisible hazard management (gas vs fire)
+        - Medical facility priorities
+        - Time pressure without route blockages
+    """
+    building = BuildingGraph()
+
+    # Set disaster metadata
+    building.set_feature('disaster_type', 'gas_leak')
+    building.set_feature('gas_source', 'basement_mechanical')
+    building.set_feature('gas_type', 'natural_gas')
+    building.set_feature('odorless', True)
+    building.set_feature('occupants_aware', False)
+
+    # Create 2 exits
+    building.add_exit('Exit1')
+    building.add_exit('Exit2')
+
+    # ========================================================================
+    # FLOOR 2 ROOMS (Upper floor - moderate gas concentration)
+    # ========================================================================
+
+    # PRIORITY 5 - ICU (Intensive Care - critical patients)
+    icu1 = Room('ICU1', 'icu', 500.0, 8, 'patients', 5)
+    icu1.set_metadata('floor', 2)
+    icu1.set_metadata('gas_concentration', 'medium')
+    icu1.set_metadata('patient_mobility', 'bedridden')
+    icu1.set_metadata('life_support', True)
+    building.add_room(icu1)
+
+    icu2 = Room('ICU2', 'icu', 500.0, 8, 'patients', 5)
+    icu2.set_metadata('floor', 2)
+    icu2.set_metadata('gas_concentration', 'medium')
+    icu2.set_metadata('patient_mobility', 'bedridden')
+    icu2.set_metadata('life_support', True)
+    building.add_room(icu2)
+
+    # PRIORITY 4 - Operating Room (surgery in progress)
+    operating_room = Room('OperatingRoom', 'operating_room', 600.0, 10, 'mixed', 4)
+    operating_room.set_metadata('floor', 2)
+    operating_room.set_metadata('gas_concentration', 'medium')
+    operating_room.set_metadata('surgery_active', True)
+    building.add_room(operating_room)
+
+    # PRIORITY 3 - Nurse Station
+    nurse_station = Room('NurseStation', 'office', 300.0, 5, 'adults', 3)
+    nurse_station.set_metadata('floor', 2)
+    nurse_station.set_metadata('gas_concentration', 'medium')
+    building.add_room(nurse_station)
+
+    # PRIORITY 2 - Staff areas
+    lounge = Room('Lounge', 'lounge', 250.0, 3, 'adults', 2)
+    lounge.set_metadata('floor', 2)
+    lounge.set_metadata('gas_concentration', 'low')
+    building.add_room(lounge)
+
+    lab = Room('Lab', 'lab', 400.0, 4, 'adults', 2)
+    lab.set_metadata('floor', 2)
+    lab.set_metadata('gas_concentration', 'medium')
+    building.add_room(lab)
+
+    # ========================================================================
+    # FLOOR 1 ROOMS (Ground floor - high gas concentration near source)
+    # ========================================================================
+
+    # PRIORITY 4 - Patient Rooms
+    patient_room1 = Room('PatientRoom1', 'patient_room', 350.0, 4, 'patients', 4)
+    patient_room1.set_metadata('floor', 1)
+    patient_room1.set_metadata('gas_concentration', 'high')
+    patient_room1.set_metadata('patient_mobility', 'limited')
+    building.add_room(patient_room1)
+
+    patient_room2 = Room('PatientRoom2', 'patient_room', 350.0, 4, 'patients', 4)
+    patient_room2.set_metadata('floor', 1)
+    patient_room2.set_metadata('gas_concentration', 'high')
+    patient_room2.set_metadata('patient_mobility', 'limited')
+    building.add_room(patient_room2)
+
+    # PRIORITY 3 - Pharmacy (staff + medications)
+    pharmacy = Room('Pharmacy', 'pharmacy', 300.0, 3, 'adults', 3)
+    pharmacy.set_metadata('floor', 1)
+    pharmacy.set_metadata('gas_concentration', 'high')
+    building.add_room(pharmacy)
+
+    # PRIORITY 2 - Administrative and common areas
+    admin = Room('Admin', 'office', 250.0, 3, 'adults', 2)
+    admin.set_metadata('floor', 1)
+    admin.set_metadata('gas_concentration', 'medium')
+    building.add_room(admin)
+
+    lobby = Room('Lobby', 'lobby', 400.0, 5, 'mixed', 2)
+    lobby.set_metadata('floor', 1)
+    lobby.set_metadata('gas_concentration', 'high')
+    building.add_room(lobby)
+
+    # PRIORITY 1 - Storage (unoccupied)
+    storage = Room('Storage', 'storage', 200.0, 0, 'adults', 1)
+    storage.set_metadata('floor', 1)
+    storage.set_metadata('gas_concentration', 'medium')
+    building.add_room(storage)
+
+    # ========================================================================
+    # FLOOR 2 EDGES
+    # ========================================================================
+    # Top row: ICU1 --- ICU2 --- Nurse
+    building.add_edge(Edge('ICU1', 'ICU2', 12.0, 'corridor'))
+    building.add_edge(Edge('ICU2', 'NurseStation', 12.0, 'corridor'))
+
+    # Bottom row: Lab --- OR --- Lounge
+    building.add_edge(Edge('Lab', 'OperatingRoom', 12.0, 'corridor'))
+    building.add_edge(Edge('OperatingRoom', 'Lounge', 12.0, 'corridor'))
+
+    # Vertical connections
+    building.add_edge(Edge('ICU1', 'Lab', 10.0, 'corridor'))
+    building.add_edge(Edge('ICU2', 'OperatingRoom', 10.0, 'corridor'))
+    building.add_edge(Edge('NurseStation', 'Lounge', 10.0, 'corridor'))
+
+    # ========================================================================
+    # FLOOR 1 EDGES
+    # ========================================================================
+    # Top row: PR1 --- PR2 --- Admin
+    building.add_edge(Edge('PatientRoom1', 'PatientRoom2', 10.0, 'corridor'))
+    building.add_edge(Edge('PatientRoom2', 'Admin', 10.0, 'corridor'))
+
+    # Bottom row: Pharm --- Lobby --- Storage
+    building.add_edge(Edge('Pharmacy', 'Lobby', 12.0, 'corridor'))
+    building.add_edge(Edge('Lobby', 'Storage', 12.0, 'corridor'))
+
+    # Vertical connections
+    building.add_edge(Edge('PatientRoom1', 'Pharmacy', 10.0, 'corridor'))
+    building.add_edge(Edge('PatientRoom2', 'Lobby', 10.0, 'corridor'))
+    building.add_edge(Edge('Admin', 'Storage', 10.0, 'corridor'))
+
+    # ========================================================================
+    # STAIRWELL CONNECTIONS (gas rising through these)
+    # ========================================================================
+    # West stairwell (connects ICU floor to patient floor)
+    stair_west1 = Edge('ICU1', 'PatientRoom1', 20.0, 'stair')
+    stair_west1.set_metadata('gas_concentration', 'medium')
+    building.add_edge(stair_west1)
+
+    stair_west2 = Edge('Lab', 'Pharmacy', 20.0, 'stair')
+    stair_west2.set_metadata('gas_concentration', 'medium')
+    building.add_edge(stair_west2)
+
+    # East stairwell
+    stair_east1 = Edge('NurseStation', 'Admin', 20.0, 'stair')
+    stair_east1.set_metadata('gas_concentration', 'medium')
+    building.add_edge(stair_east1)
+
+    stair_east2 = Edge('Lounge', 'Storage', 20.0, 'stair')
+    stair_east2.set_metadata('gas_concentration', 'low')
+    building.add_edge(stair_east2)
+
+    # ========================================================================
+    # EXIT CONNECTIONS (both floors)
+    # ========================================================================
+    # Exit1 (west side) - connects to Floor 2 and Floor 1
+    building.add_edge(Edge('Exit1', 'ICU1', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit1', 'Lab', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit1', 'PatientRoom1', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit1', 'Pharmacy', 8.0, 'hallway'))
+
+    # Exit2 (east side) - connects to Floor 2 and Floor 1
+    building.add_edge(Edge('Exit2', 'Lounge', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit2', 'NurseStation', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit2', 'Admin', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit2', 'Storage', 8.0, 'hallway'))
+
+    # ========================================================================
+    # SET POSITIONS FOR VISUALIZATION
+    # ========================================================================
+    # Exits (left and right)
+    building.set_node_position('Exit1', 0.0, 2.5)
+    building.set_node_position('Exit2', 5.0, 2.5)
+
+    # Floor 2 (y = 4-5)
+    # Top row (ICU)
+    building.set_node_position('ICU1', 1.0, 5.0)
+    building.set_node_position('ICU2', 2.0, 5.0)
+    building.set_node_position('NurseStation', 3.0, 5.0)
+
+    # Bottom row (surgical/staff)
+    building.set_node_position('Lab', 1.0, 4.0)
+    building.set_node_position('OperatingRoom', 2.0, 4.0)
+    building.set_node_position('Lounge', 3.0, 4.0)
+
+    # Floor 1 (y = 0-1)
+    # Top row (patient rooms)
+    building.set_node_position('PatientRoom1', 1.0, 1.0)
+    building.set_node_position('PatientRoom2', 2.0, 1.0)
+    building.set_node_position('Admin', 3.0, 1.0)
+
+    # Bottom row (services)
+    building.set_node_position('Pharmacy', 1.0, 0.0)
+    building.set_node_position('Lobby', 2.0, 0.0)
+    building.set_node_position('Storage', 3.0, 0.0)
 
     return building
