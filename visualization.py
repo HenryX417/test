@@ -119,8 +119,8 @@ def plot_floor_plan(building: BuildingGraph, scenario_name: str, output_dir: str
             if distance > 0.5:  # Only label longer edges
                 mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
                 ax.text(mid_x, mid_y, f'{edge.distance:.0f}',
-                       fontsize=6, ha='center', va='center',
-                       bbox=dict(boxstyle='round,pad=0.15', facecolor='white', alpha=0.9, edgecolor='none'),
+                       fontsize=8, ha='center', va='center',
+                       bbox=dict(boxstyle='round,pad=0.18', facecolor='white', alpha=0.9, edgecolor='none'),
                        zorder=2)
 
     # Draw ROOM nodes (hollow circles)
@@ -317,25 +317,28 @@ def plot_optimal_paths(
         if len(path) <= 1:
             continue
 
+        # Expand path to include ALL intermediate nodes (not just searched rooms)
+        expanded_path = building.expand_path_with_intermediates(path)
+
         color = RESPONDER_COLORS[resp_id % len(RESPONDER_COLORS)]
 
-        for i in range(len(path) - 1):
-            if path[i] not in pos or path[i+1] not in pos:
+        # Track which nodes are actually searched (not just passed through)
+        searched_nodes = set(path)
+
+        for i in range(len(expanded_path) - 1):
+            if expanded_path[i] not in pos or expanded_path[i+1] not in pos:
                 continue
 
-            x1, y1 = pos[path[i]]
-            x2, y2 = pos[path[i+1]]
+            x1, y1 = pos[expanded_path[i]]
+            x2, y2 = pos[expanded_path[i+1]]
 
-            # Draw arrow
+            # Draw arrow (thinner if just passing through)
+            is_search_segment = expanded_path[i] in searched_nodes or expanded_path[i+1] in searched_nodes
+            linewidth = 2.5 if is_search_segment else 1.5
+            alpha = 0.7 if is_search_segment else 0.4
+
             ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
-                       arrowprops=dict(arrowstyle='->', lw=2.5, color=color, alpha=0.7))
-
-            # Add sequence number
-            mid_x = (x1 + x2) / 2
-            mid_y = (y1 + y2) / 2
-            ax.text(mid_x, mid_y, str(i+1),
-                   fontsize=7, ha='center', va='center', fontweight='bold',
-                   bbox=dict(boxstyle='circle,pad=0.2', facecolor=color, alpha=0.5))
+                       arrowprops=dict(arrowstyle='->', lw=linewidth, color=color, alpha=alpha))
 
     # Overlay node labels
     for node in all_nodes:
@@ -403,11 +406,14 @@ def plot_gantt_chart(
                    color=color, alpha=0.8, edgecolor='black', linewidth=0.5)
 
             # Add label if bar is wide enough
-            if duration > max_time * 0.02:  # Only label if >2% of total time
+            if duration > max_time * 0.03:  # Only label if >3% of total time (avoid clutter)
                 label_text = location.split(' -> ')[-1] if activity_type == 'travel' else location
-                label_text = label_text.replace('Office', 'O').replace('Classroom', 'C')
+                label_text = label_text.replace('Office', 'O').replace('Classroom', 'C').replace('Lab', 'L').replace('Storage', 'S')
+                # Truncate very long labels
+                if len(label_text) > 5:
+                    label_text = label_text[:4] + '.'
                 ax.text(start_time + duration/2, y_pos, label_text,
-                       fontsize=7, ha='center', va='center', fontweight='bold')
+                       fontsize=9, ha='center', va='center', fontweight='bold')
 
     # Formatting
     ax.set_yticks(range(len(responder_ids)))

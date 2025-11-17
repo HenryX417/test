@@ -153,7 +153,11 @@ def create_scenario2() -> BuildingGraph:
     building.add_edge(Edge('Exit2', 'Office2', 8.0, 'hallway'))
     building.add_edge(Edge('Exit2', 'Classroom2', 8.0, 'hallway'))
 
-    # Floor 1: Cross connections
+    # Floor 1: Vertical connections (offices to classrooms below)
+    building.add_edge(Edge('Office1', 'Classroom1', 12.0, 'corridor'))
+    building.add_edge(Edge('Office2', 'Classroom2', 12.0, 'corridor'))
+
+    # Floor 1: Cross connections (through central hub)
     building.add_edge(Edge('Office1', 'Storage1', 12.0, 'corridor'))
     building.add_edge(Edge('Lab1', 'Classroom1', 12.0, 'corridor'))
     building.add_edge(Edge('Office2', 'Storage1', 12.0, 'corridor'))
@@ -285,7 +289,7 @@ def create_scenario3() -> BuildingGraph:
     # Exit connections (as specified)
     building.add_edge(Edge('Exit1', 'Office1', 8.0, 'hallway'))
     building.add_edge(Edge('Exit1', 'Office3', 8.0, 'hallway'))
-    building.add_edge(Edge('Exit1', 'Office4', 12.0, 'hallway'))
+    # Note: E1 NOT connected to O4 (user specified)
 
     building.add_edge(Edge('Exit2', 'Office2', 8.0, 'hallway'))
     building.add_edge(Edge('Exit2', 'Office5', 8.0, 'hallway'))

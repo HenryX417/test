@@ -329,3 +329,34 @@ class BuildingGraph:
             Room object or None if not found
         """
         return self.rooms.get(room_id)
+
+    def expand_path_with_intermediates(self, path: List[str], walking_speed: float = 1.5) -> List[str]:
+        """
+        Expand a path to include all intermediate nodes traversed.
+
+        When a path goes from A to C, it might actually traverse through B.
+        This function expands [A, C] to [A, B, C] using shortest paths.
+
+        Args:
+            path: Original path (may skip intermediate nodes)
+            walking_speed: Walking speed for pathfinding
+
+        Returns:
+            Expanded path with all intermediate nodes
+        """
+        if len(path) <= 1:
+            return path
+
+        expanded = [path[0]]
+
+        for i in range(len(path) - 1):
+            start = path[i]
+            end = path[i + 1]
+
+            # Get shortest path between consecutive nodes
+            shortest, _ = self.shortest_path(start, end, walking_speed)
+
+            # Add all nodes except the first (already in expanded)
+            expanded.extend(shortest[1:])
+
+        return expanded
