@@ -343,3 +343,147 @@ def create_scenario3() -> BuildingGraph:
     building.set_node_position('Office10', 3.0, 0.0)
 
     return building
+
+
+def create_scenario4() -> BuildingGraph:
+    """
+    Create Scenario 4: Elementary School Emergency (Chemical Lab Fire).
+
+    **PART 4 EXTENSION: Priority-Based Evacuation**
+
+    Emergency Context:
+        Fire in chemistry lab requires prioritizing vulnerable populations.
+        Young children (kindergarten, daycare) need evacuation first.
+
+    Layout (single floor, 10 rooms, 2 exits):
+         K1 --- Lab --- K2
+    E1 --|      |       |-- E2
+         DC --- C1  --- C2
+          |      |       |
+         O1 --- S1  --- O2
+
+    Priority Levels:
+        - Priority 5 (CRITICAL): Chemistry Lab (fire source), Kindergarten classrooms
+        - Priority 4 (HIGH): Daycare center
+        - Priority 3 (MEDIUM): Regular classrooms
+        - Priority 2 (LOW): Offices, Storage
+
+    Rooms:
+        - 1 Chemistry Lab (fire active, priority 5)
+        - 2 Kindergarten classrooms (near lab, priority 5)
+        - 1 Daycare center (priority 4)
+        - 2 Regular classrooms (priority 3)
+        - 2 Offices (priority 2)
+        - 1 Storage (priority 2)
+
+    This scenario demonstrates:
+        - Impact of priority-based room assignment
+        - Trade-off between total time and high-priority room clearance time
+        - Practical emergency management decision-making
+    """
+    building = BuildingGraph()
+
+    # Set disaster metadata
+    building.set_feature('disaster_type', 'fire')
+    building.set_feature('fire_source', 'Lab1')
+    building.set_feature('alarm_triggered', True)
+
+    # Create 2 exits
+    building.add_exit('Exit1')
+    building.add_exit('Exit2')
+
+    # PRIORITY 5 (CRITICAL) - Fire source and nearby kindergartens
+    lab = Room('Lab1', 'lab', 600.0, 15, 'adults', 5)
+    lab.set_metadata('has_fire', True)
+    lab.set_metadata('temperature', 150)  # degrees F
+    building.add_room(lab)
+
+    kindergarten_rooms = [
+        Room('Kindergarten1', 'classroom', 400.0, 20, 'children', 5),
+        Room('Kindergarten2', 'classroom', 400.0, 20, 'children', 5),
+    ]
+    for room in kindergarten_rooms:
+        room.set_metadata('near_fire', True)
+        room.set_metadata('occupant_age', 'kindergarten')
+        building.add_room(room)
+
+    # PRIORITY 4 (HIGH) - Daycare center
+    daycare = Room('Daycare1', 'daycare', 500.0, 15, 'children', 4)
+    daycare.set_metadata('occupant_age', 'toddler')
+    building.add_room(daycare)
+
+    # PRIORITY 3 (MEDIUM) - Regular classrooms
+    classrooms = [
+        Room('Classroom1', 'classroom', 400.0, 25, 'adults', 3),
+        Room('Classroom2', 'classroom', 400.0, 25, 'adults', 3),
+    ]
+    for room in classrooms:
+        building.add_room(room)
+
+    # PRIORITY 2 (LOW) - Offices and storage
+    low_priority_rooms = [
+        Room('Office1', 'office', 200.0, 2, 'adults', 2),
+        Room('Office2', 'office', 200.0, 2, 'adults', 2),
+        Room('Storage1', 'storage', 300.0, 0, 'adults', 1),
+    ]
+    for room in low_priority_rooms:
+        building.add_room(room)
+
+    # Horizontal connections - Top row: K1 --- Lab --- K2
+    building.add_edge(Edge('Kindergarten1', 'Lab1', 10.0, 'corridor'))
+    building.add_edge(Edge('Lab1', 'Kindergarten2', 10.0, 'corridor'))
+
+    # Horizontal connections - Middle row: DC --- C1 --- C2
+    building.add_edge(Edge('Daycare1', 'Classroom1', 10.0, 'corridor'))
+    building.add_edge(Edge('Classroom1', 'Classroom2', 10.0, 'corridor'))
+
+    # Horizontal connections - Bottom row: O1 --- S1 --- O2
+    building.add_edge(Edge('Office1', 'Storage1', 10.0, 'corridor'))
+    building.add_edge(Edge('Storage1', 'Office2', 10.0, 'corridor'))
+
+    # Vertical connections (column by column)
+    building.add_edge(Edge('Kindergarten1', 'Daycare1', 12.0, 'corridor'))
+    building.add_edge(Edge('Daycare1', 'Office1', 12.0, 'corridor'))
+
+    building.add_edge(Edge('Lab1', 'Classroom1', 12.0, 'corridor'))
+    building.add_edge(Edge('Classroom1', 'Storage1', 12.0, 'corridor'))
+
+    building.add_edge(Edge('Kindergarten2', 'Classroom2', 12.0, 'corridor'))
+    building.add_edge(Edge('Classroom2', 'Office2', 12.0, 'corridor'))
+
+    # Exit connections - Deliberately place OFFICES closer to exits
+    # This creates tension: nearest-neighbor wants offices, priority mode wants kindergartens
+    building.add_edge(Edge('Exit1', 'Office1', 5.0, 'hallway'))  # Office is CLOSER
+    building.add_edge(Edge('Exit1', 'Daycare1', 10.0, 'hallway'))  # Daycare is farther
+    building.add_edge(Edge('Exit1', 'Kindergarten1', 15.0, 'hallway'))  # Kindergarten is FARTHEST
+
+    building.add_edge(Edge('Exit2', 'Office2', 5.0, 'hallway'))  # Office is CLOSER
+    building.add_edge(Edge('Exit2', 'Classroom2', 10.0, 'hallway'))  # Classroom is farther
+    building.add_edge(Edge('Exit2', 'Kindergarten2', 15.0, 'hallway'))  # Kindergarten is FARTHEST
+
+    # Diagonal connections for better connectivity
+    building.add_edge(Edge('Kindergarten1', 'Classroom1', 14.0, 'corridor'))
+    building.add_edge(Edge('Lab1', 'Daycare1', 14.0, 'corridor'))
+    building.add_edge(Edge('Kindergarten2', 'Classroom1', 14.0, 'corridor'))
+
+    # Set explicit positions for visualization
+    # Top row (y=3)
+    building.set_node_position('Kindergarten1', 1.0, 3.0)
+    building.set_node_position('Lab1', 2.0, 3.0)
+    building.set_node_position('Kindergarten2', 3.0, 3.0)
+
+    # Middle row (y=2)
+    building.set_node_position('Daycare1', 1.0, 2.0)
+    building.set_node_position('Classroom1', 2.0, 2.0)
+    building.set_node_position('Classroom2', 3.0, 2.0)
+
+    # Bottom row (y=1)
+    building.set_node_position('Office1', 1.0, 1.0)
+    building.set_node_position('Storage1', 2.0, 1.0)
+    building.set_node_position('Office2', 3.0, 1.0)
+
+    # Exits on left and right
+    building.set_node_position('Exit1', 0.0, 2.5)
+    building.set_node_position('Exit2', 4.0, 2.5)
+
+    return building

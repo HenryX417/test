@@ -69,19 +69,41 @@ def assign_rooms_to_responders(
 
     # Greedy assignment
     while unassigned_rooms:
-        # Find responder with minimum workload
-        min_responder = min(responder_workloads.keys(), key=lambda x: responder_workloads[x])
+        if use_priority:
+            # PRIORITY MODE: Take next high-priority room and assign to closest responder
+            # This ensures critical rooms are assigned first regardless of distance
+            target_room = unassigned_rooms[0]  # First room in priority-sorted list
 
-        # Find nearest unassigned room to this responder's current position
-        current_pos = responder_positions[min_responder]
-        nearest_room = None
-        min_distance = float('inf')
+            # Find which responder can reach this room fastest
+            min_responder = None
+            min_cost = float('inf')
 
-        for room_id in unassigned_rooms:
-            dist = building.distance(current_pos, room_id, walking_speed)
-            if dist < min_distance:
-                min_distance = dist
-                nearest_room = room_id
+            for resp_id in responder_workloads.keys():
+                current_pos = responder_positions[resp_id]
+                travel_time = building.distance(current_pos, target_room, walking_speed)
+                # Consider both travel time and current workload for balance
+                total_cost = responder_workloads[resp_id] + travel_time
+
+                if total_cost < min_cost:
+                    min_cost = total_cost
+                    min_responder = resp_id
+
+            nearest_room = target_room
+            min_distance = building.distance(responder_positions[min_responder], target_room, walking_speed)
+        else:
+            # STANDARD MODE: Pick responder with min workload, find nearest room
+            min_responder = min(responder_workloads.keys(), key=lambda x: responder_workloads[x])
+
+            # Find nearest unassigned room to this responder's current position
+            current_pos = responder_positions[min_responder]
+            nearest_room = None
+            min_distance = float('inf')
+
+            for room_id in unassigned_rooms:
+                dist = building.distance(current_pos, room_id, walking_speed)
+                if dist < min_distance:
+                    min_distance = dist
+                    nearest_room = room_id
 
         if nearest_room is None:
             break
@@ -484,3 +506,89 @@ def nearest_neighbor_only(
         paths[resp_id] = (path, time_taken)
 
     return (assignments, paths)
+
+
+def add_redundancy_checks(
+    assignments: Dict[int, List[str]],
+    building: BuildingGraph,
+    num_responders: int,
+    redundancy_level: int = 1
+) -> Dict[int, List[str]]:
+    """
+    Add redundancy by assigning critical rooms to multiple responders for double-checking.
+
+    PART 4 EXTENSION: Safety-first approach with redundant room sweeps.
+
+    This ensures high-priority rooms (hospitals, daycares, labs) are checked
+    multiple times by different responders to minimize missed occupants.
+
+    Args:
+        assignments: Current room assignments
+        building: BuildingGraph object
+        num_responders: Number of responders
+        redundancy_level: Number of additional checks for high-priority rooms (default: 1)
+
+    Returns:
+        Updated assignments with redundancy checks added
+    """
+    # Identify high-priority rooms (priority >= 4)
+    critical_rooms = [rid for rid, room in building.rooms.items() if room.priority >= 4]
+
+    # For each critical room, assign it to additional responders
+    for room_id in critical_rooms:
+        # Find which responder currently has this room
+        primary_responder = None
+        for resp_id, rooms in assignments.items():
+            if room_id in rooms:
+                primary_responder = resp_id
+                break
+
+        if primary_responder is None:
+            continue  # Room not assigned yet
+
+        # Assign to redundancy_level additional responders (different from primary)
+        available_responders = [i for i in range(num_responders) if i != primary_responder]
+
+        for i in range(min(redundancy_level, len(available_responders))):
+            backup_responder = available_responders[i]
+            if room_id not in assignments[backup_responder]:
+                assignments[backup_responder].append(room_id)
+
+    return assignments
+
+
+def assign_rooms_with_redundancy(
+    building: BuildingGraph,
+    num_responders: int,
+    walking_speed: float = 1.5,
+    visibility: float = 1.0,
+    use_priority: bool = False,
+    redundancy_level: int = 1
+) -> Dict[int, List[str]]:
+    """
+    Assign rooms with safety redundancy for critical areas.
+
+    PART 4 EXTENSION: Combines priority-based assignment with redundancy checking.
+
+    Args:
+        building: BuildingGraph object
+        num_responders: Number of responders
+        walking_speed: Walking speed in m/s
+        visibility: Visibility factor
+        use_priority: If True, assign high-priority rooms first
+        redundancy_level: Number of backup checks for critical rooms
+
+    Returns:
+        Dictionary mapping responder_id to list of assigned room IDs
+    """
+    # First, do standard assignment
+    assignments = assign_rooms_to_responders(
+        building, num_responders, walking_speed, visibility, use_priority
+    )
+
+    # Add redundancy checks for critical rooms
+    assignments = add_redundancy_checks(
+        assignments, building, num_responders, redundancy_level
+    )
+
+    return assignments

@@ -33,7 +33,7 @@ class EvacuationSimulation:
         self.walking_speed = 1.5
         self.visibility = 1.0
 
-    def run(self, walking_speed: float = 1.5, visibility: float = 1.0):
+    def run(self, walking_speed: float = 1.5, visibility: float = 1.0, use_priority: bool = False):
         """
         Execute complete simulation.
 
@@ -46,6 +46,7 @@ class EvacuationSimulation:
         Args:
             walking_speed: Walking speed in m/s
             visibility: Visibility factor (0.0 to 1.0)
+            use_priority: If True, assign high-priority rooms first (Part 4 extension)
         """
         self.walking_speed = walking_speed
         self.visibility = visibility
@@ -55,7 +56,8 @@ class EvacuationSimulation:
             self.building,
             self.num_responders,
             walking_speed,
-            visibility
+            visibility,
+            use_priority=use_priority  # Part 4: Priority-based assignment
         )
 
         # Step 2: Find optimal paths

@@ -3,6 +3,12 @@ Main execution script for evacuation sweep optimization system.
 
 This script runs all scenarios, generates visualizations, and produces
 comparison tables.
+
+Execution Modes:
+    - parts_1_3: Run standard scenarios (default)
+    - part_4: Run Part 4 extensions only
+    - full: Run everything (Parts 1-3 and Part 4)
+    - quick: Quick test mode (single scenario)
 """
 
 import os
@@ -23,13 +29,14 @@ from visualization import (
 )
 
 
-def main(output_dir: str = '/mnt/user-data/outputs'):
+def main(output_dir: str = '/mnt/user-data/outputs', mode: str = 'parts_1_3'):
     """
     Run all three scenarios with varying responder counts.
     Generate all figures and tables.
 
     Args:
         output_dir: Directory to save outputs (default: /mnt/user-data/outputs)
+        mode: Execution mode (parts_1_3, part_4, full, quick)
     """
 
     # Ensure output directory exists
@@ -193,6 +200,39 @@ def main(output_dir: str = '/mnt/user-data/outputs'):
 
 
 if __name__ == "__main__":
-    # Allow optional command-line argument for output directory
-    output_dir = sys.argv[1] if len(sys.argv) > 1 else '/mnt/user-data/outputs'
-    main(output_dir)
+    # Parse command-line arguments
+    output_dir = '/mnt/user-data/outputs'
+    mode = 'parts_1_3'  # Default mode
+
+    if len(sys.argv) > 1:
+        if sys.argv[1] in ['parts_1_3', 'part_4', 'full', 'quick']:
+            mode = sys.argv[1]
+        else:
+            output_dir = sys.argv[1]  # Backward compatibility: first arg is output dir
+
+    if len(sys.argv) > 2:
+        output_dir = sys.argv[2]  # Second arg is output dir when first is mode
+
+    print(f"Execution mode: {mode}")
+    print(f"Output directory: {output_dir}")
+
+    if mode == 'part_4':
+        # Run Part 4 extensions only
+        from generate_part4_outputs import generate_all_part4_outputs
+        generate_all_part4_outputs(output_dir)
+    elif mode == 'full':
+        # Run Parts 1-3 first, then Part 4
+        main(output_dir, mode='parts_1_3')
+        from generate_part4_outputs import generate_all_part4_outputs
+        generate_all_part4_outputs(output_dir)
+    elif mode == 'quick':
+        # Quick test mode - single scenario
+        print("\\nRunning QUICK test mode (single scenario)...")
+        from scenarios import create_scenario1
+        building = create_scenario1()
+        sim = EvacuationSimulation(building, 3)
+        sim.run()
+        print(f"✅ Quick test complete! Total time: {sim.get_total_time():.1f}s")
+    else:
+        # Default: Run Parts 1-3
+        main(output_dir, mode)

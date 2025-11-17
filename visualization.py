@@ -68,7 +68,8 @@ def create_graph_layout(building: BuildingGraph) -> Dict[str, Tuple[float, float
         G.add_edge(edge.start, edge.end, weight=edge.distance)
 
     # Use spring layout for automatic positioning
-    pos = nx.spring_layout(G, k=2, iterations=50, seed=42)
+    # k controls node spacing - lower k = nodes closer together (more compact)
+    pos = nx.spring_layout(G, k=1.2, iterations=50, seed=42)
 
     return pos
 
@@ -105,10 +106,10 @@ def plot_floor_plan(building: BuildingGraph, scenario_name: str, output_dir: str
 
             # Different line styles for different edge types
             linestyle = '-'
-            linewidth = 1.5
+            linewidth = 0.8  # Thinner edges for cleaner look
             if edge.edge_type == 'stair':
                 linestyle = '--'
-                linewidth = 2.0
+                linewidth = 1.0  # Slightly thicker for stairs
 
             ax.plot([x1, x2], [y1, y2], color='black', linewidth=linewidth,
                    alpha=0.6, linestyle=linestyle, zorder=1)
@@ -131,14 +132,14 @@ def plot_floor_plan(building: BuildingGraph, scenario_name: str, output_dir: str
         x, y = pos[room_id]
 
         # Hollow circle with black outline
-        circle = plt.Circle((x, y), radius=0.08,
+        circle = plt.Circle((x, y), radius=0.16,  # Larger nodes for visibility
                            facecolor='lightblue', edgecolor='black',
                            linewidth=2, zorder=3)
         ax.add_patch(circle)
 
         # Room label (shortened)
         short_label = room_id.replace('Office', 'O').replace('Classroom', 'C').replace('Lab', 'L').replace('Storage', 'S').replace('Daycare', 'D')
-        ax.text(x, y, short_label, fontsize=10, ha='center', va='center',
+        ax.text(x, y, short_label, fontsize=12, ha='center', va='center',
                fontweight='bold', zorder=4)
 
     # Draw EXIT nodes (hollow squares)
@@ -149,7 +150,7 @@ def plot_floor_plan(building: BuildingGraph, scenario_name: str, output_dir: str
         x, y = pos[exit_id]
 
         # Hollow square with black outline
-        square = mpatches.Rectangle((x - 0.08, y - 0.08), 0.16, 0.16,
+        square = mpatches.Rectangle((x - 0.16, y - 0.16), 0.32, 0.32,  # Larger nodes for visibility
                                     facecolor='lightgreen', edgecolor='black',
                                     linewidth=2, zorder=3)
         ax.add_patch(square)
@@ -204,7 +205,7 @@ def plot_cluster_assignment(
         if edge.start in pos and edge.end in pos:
             x_vals = [pos[edge.start][0], pos[edge.end][0]]
             y_vals = [pos[edge.start][1], pos[edge.end][1]]
-            ax.plot(x_vals, y_vals, 'k-', alpha=0.2, linewidth=1)
+            ax.plot(x_vals, y_vals, 'k-', alpha=0.2, linewidth=0.5)  # Thinner edges
 
     # Draw nodes
     for node in all_nodes:
@@ -222,22 +223,22 @@ def plot_cluster_assignment(
             else:
                 color = '#95a5a6'  # Unassigned
 
-            circle = plt.Circle((x, y), radius=0.08, color=color, alpha=0.7, zorder=2)
+            circle = plt.Circle((x, y), radius=0.16, color=color, alpha=0.7, zorder=2)  # Larger for visibility
             ax.add_patch(circle)
             label = node.replace('Office', 'O').replace('Classroom', 'C').replace('Lab', 'L').replace('Storage', 'S')
             ax.text(x, y, label,
-                   fontsize=8, ha='center', va='center', fontweight='bold', zorder=3)
+                   fontsize=10, ha='center', va='center', fontweight='bold', zorder=3)
         elif node in building.exits:
             # Exit node (square)
-            square = mpatches.Rectangle((x - 0.08, y - 0.08), 0.16, 0.16,
+            square = mpatches.Rectangle((x - 0.16, y - 0.16), 0.32, 0.32,  # Larger for visibility
                                        color='#27ae60', alpha=0.8, zorder=2)
             ax.add_patch(square)
             ax.text(x, y, node.replace('Exit', 'E'),
-                   fontsize=8, ha='center', va='center', fontweight='bold',
+                   fontsize=10, ha='center', va='center', fontweight='bold',
                    color='white', zorder=3)
         else:
             # Routing node (small gray circle)
-            circle = plt.Circle((x, y), radius=0.04, color='#95a5a6',
+            circle = plt.Circle((x, y), radius=0.08, color='#95a5a6',  # Slightly larger
                               alpha=0.5, zorder=1)
             ax.add_patch(circle)
 
@@ -290,7 +291,7 @@ def plot_optimal_paths(
         if edge.start in pos and edge.end in pos:
             x_vals = [pos[edge.start][0], pos[edge.end][0]]
             y_vals = [pos[edge.start][1], pos[edge.end][1]]
-            ax.plot(x_vals, y_vals, 'k-', alpha=0.1, linewidth=0.5)
+            ax.plot(x_vals, y_vals, 'k-', alpha=0.1, linewidth=0.25)  # Very thin edges
 
     # Draw base nodes
     for node in all_nodes:
@@ -301,15 +302,15 @@ def plot_optimal_paths(
         room = building.get_room(node)
 
         if room:
-            circle = plt.Circle((x, y), radius=0.06, color='#ecf0f1', alpha=0.5, zorder=1)
+            circle = plt.Circle((x, y), radius=0.12, color='#ecf0f1', alpha=0.5, zorder=1)  # Larger for visibility
             ax.add_patch(circle)
         elif node in building.exits:
-            square = mpatches.Rectangle((x - 0.06, y - 0.06), 0.12, 0.12,
+            square = mpatches.Rectangle((x - 0.12, y - 0.12), 0.24, 0.24,  # Larger for visibility
                                        color='#27ae60', alpha=0.6, zorder=1)
             ax.add_patch(square)
         else:
             # Routing node
-            circle = plt.Circle((x, y), radius=0.03, color='#95a5a6', alpha=0.3, zorder=1)
+            circle = plt.Circle((x, y), radius=0.06, color='#95a5a6', alpha=0.3, zorder=1)  # Slightly larger
             ax.add_patch(circle)
 
     # Draw paths
@@ -334,7 +335,7 @@ def plot_optimal_paths(
 
             # Draw arrow (thinner if just passing through)
             is_search_segment = expanded_path[i] in searched_nodes or expanded_path[i+1] in searched_nodes
-            linewidth = 2.5 if is_search_segment else 1.5
+            linewidth = 1.5 if is_search_segment else 0.8  # Thinner arrows
             alpha = 0.7 if is_search_segment else 0.4
 
             ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
