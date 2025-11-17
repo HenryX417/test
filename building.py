@@ -5,8 +5,8 @@ This module contains the core data structures representing rooms, edges,
 and building graphs used in the evacuation simulation system.
 """
 
-from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
+from dataclasses import dataclass, field
+from typing import Dict, List, Tuple, Optional, Any
 import heapq
 
 
@@ -105,10 +105,30 @@ class Room:
 @dataclass
 class Edge:
     """Represents a connection between two nodes in the building."""
-    start: str
-    end: str
+    start: str  # Also called node1 for consistency
+    end: str    # Also called node2 for consistency
     distance: float  # meters
     edge_type: str  # 'hallway', 'stair', 'corridor'
+    metadata: Dict[str, Any] = None  # Emergency and environmental metadata
+
+    def __post_init__(self):
+        """Initialize metadata dict if not provided."""
+        if self.metadata is None:
+            self.metadata = {}
+
+    @property
+    def node1(self) -> str:
+        """Alias for start node."""
+        return self.start
+
+    @property
+    def node2(self) -> str:
+        """Alias for end node."""
+        return self.end
+
+    def set_metadata(self, key: str, value: Any):
+        """Set metadata value."""
+        self.metadata[key] = value
 
     def calculate_travel_time(self, walking_speed: float) -> float:
         """

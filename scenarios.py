@@ -488,3 +488,268 @@ def create_scenario4() -> BuildingGraph:
     building.set_node_position('Exit2', 4.0, 2.5)
 
     return building
+
+
+def create_scenario6() -> BuildingGraph:
+    """
+    Create Scenario 6: Office Building with Active Chemical Lab Fire.
+
+    **PART 4 EXTENSION: Emergency Response Modeling**
+
+    Emergency Context:
+        Active fire in 2nd floor chemistry lab. Fire has spread to adjacent
+        storage room. Heavy smoke on Floor 2. East stairwell blocked by debris.
+        Responders must route around hazards while prioritizing high-risk areas.
+
+    Building: 2 floors, 14 rooms, 3 exits (17 nodes total)
+
+    Emergency Conditions:
+        - Lab1 (Floor 2): Active fire, IMPASSABLE (cannot enter)
+        - Storage2 (Floor 2): Adjacent to fire, high heat, IMPASSABLE
+        - Floor 2 rooms near fire: Heavy smoke, visibility=0.5
+        - Floor 2 hallways: Smoke-filled, walking_speed×0.7
+        - East Stairwell: Blocked by debris (edge removed)
+        - Floor 1: Minimal impact initially
+
+    Layout:
+    FLOOR 2 (where fire is):
+         O3 --- Lab1(FIRE) --- S2(BLOCKED)
+          |       |              |
+    E3 --+-- C3 --+-- C4 --------+-- [BLOCKED STAIR]
+          |       |              |
+         O4 ----- O5 ----------- C5
+
+    FLOOR 1 (safer):
+         O1 --- C1 --- O2
+    E1 --|      |       |-- E2
+         O6 --- C2 --- O7
+
+    Priority Assignments:
+        - Floor 2 near fire: Priority 5 (immediate danger)
+        - Floor 2 other rooms: Priority 4 (smoke exposure)
+        - Floor 1 rooms: Priority 3 (secondary)
+
+    Rooms:
+        - 7 Offices (mixed priorities)
+        - 5 Classrooms (priorities 3-5)
+        - 1 Chemistry Lab (fire source, priority 5, IMPASSABLE)
+        - 1 Storage room (adjacent to fire, IMPASSABLE)
+
+    This scenario demonstrates:
+        - Emergency routing around impassable areas
+        - Environmental hazard modeling (smoke, heat, blocked paths)
+        - Priority-based evacuation under adverse conditions
+        - Comparison: normal conditions vs emergency conditions
+        - Algorithm robustness when routes are blocked
+    """
+    building = BuildingGraph()
+
+    # Set disaster metadata
+    building.set_feature('disaster_type', 'fire')
+    building.set_feature('fire_source', 'Lab1')
+    building.set_feature('fire_floor', 2)
+    building.set_feature('alarm_triggered', True)
+    building.set_feature('sprinklers_active', True)
+
+    # Create 3 exits (Exit1 and Exit2 on Floor 1, Exit3 on Floor 2)
+    building.add_exit('Exit1')
+    building.add_exit('Exit2')
+    building.add_exit('Exit3')
+
+    # ========================================================================
+    # FLOOR 1 ROOMS (Safer area, secondary priority)
+    # ========================================================================
+    floor1_rooms = [
+        Room('Office1', 'office', 200.0, 3, 'adults', 3),
+        Room('Classroom1', 'classroom', 400.0, 25, 'adults', 3),
+        Room('Office2', 'office', 200.0, 3, 'adults', 3),
+        Room('Office6', 'office', 200.0, 2, 'adults', 3),
+        Room('Classroom2', 'classroom', 400.0, 20, 'adults', 3),
+        Room('Office7', 'office', 200.0, 2, 'adults', 3),
+    ]
+
+    for room in floor1_rooms:
+        room.set_metadata('floor', 1)
+        room.set_metadata('smoke_level', 'none')
+        building.add_room(room)
+
+    # ========================================================================
+    # FLOOR 2 ROOMS (Fire zone, high priority)
+    # ========================================================================
+
+    # FIRE SOURCE - Chemistry Lab (IMPASSABLE)
+    lab1 = Room('Lab1', 'lab', 600.0, 12, 'adults', 5)
+    lab1.set_metadata('floor', 2)
+    lab1.set_metadata('has_fire', True)
+    lab1.set_metadata('passable', False)  # CRITICAL: Cannot enter
+    lab1.set_metadata('temperature', 180)  # degrees F
+    lab1.set_metadata('smoke_level', 'extreme')
+    building.add_room(lab1)
+
+    # ADJACENT TO FIRE - Storage (IMPASSABLE due to heat/smoke)
+    storage2 = Room('Storage2', 'storage', 300.0, 0, 'adults', 5)
+    storage2.set_metadata('floor', 2)
+    storage2.set_metadata('near_fire', True)
+    storage2.set_metadata('passable', False)  # CRITICAL: Too dangerous
+    storage2.set_metadata('temperature', 140)  # degrees F
+    storage2.set_metadata('smoke_level', 'extreme')
+    building.add_room(storage2)
+
+    # NEAR FIRE - Heavy smoke zones (PASSABLE but hazardous)
+    office3 = Room('Office3', 'office', 200.0, 3, 'adults', 5)
+    office3.set_metadata('floor', 2)
+    office3.set_metadata('near_fire', True)
+    office3.set_metadata('smoke_level', 'high')
+    office3.set_metadata('visibility_factor', 0.5)  # Reduced visibility
+    building.add_room(office3)
+
+    classroom3 = Room('Classroom3', 'classroom', 400.0, 25, 'adults', 5)
+    classroom3.set_metadata('floor', 2)
+    classroom3.set_metadata('near_fire', True)
+    classroom3.set_metadata('smoke_level', 'high')
+    classroom3.set_metadata('visibility_factor', 0.5)
+    building.add_room(classroom3)
+
+    # FLOOR 2 - Other rooms (smoke but farther from fire)
+    floor2_other = [
+        Room('Office4', 'office', 200.0, 2, 'adults', 4),
+        Room('Office5', 'office', 200.0, 2, 'adults', 4),
+        Room('Classroom4', 'classroom', 400.0, 20, 'adults', 4),
+        Room('Classroom5', 'classroom', 400.0, 20, 'adults', 4),
+    ]
+
+    for room in floor2_other:
+        room.set_metadata('floor', 2)
+        room.set_metadata('smoke_level', 'medium')
+        room.set_metadata('visibility_factor', 0.7)
+        building.add_room(room)
+
+    # ========================================================================
+    # FLOOR 1 EDGES (Normal conditions)
+    # ========================================================================
+
+    # Floor 1: Top row connections (O1 --- C1 --- O2)
+    building.add_edge(Edge('Office1', 'Classroom1', 10.0, 'corridor'))
+    building.add_edge(Edge('Classroom1', 'Office2', 10.0, 'corridor'))
+
+    # Floor 1: Bottom row connections (O6 --- C2 --- O7)
+    building.add_edge(Edge('Office6', 'Classroom2', 10.0, 'corridor'))
+    building.add_edge(Edge('Classroom2', 'Office7', 10.0, 'corridor'))
+
+    # Floor 1: Vertical connections
+    building.add_edge(Edge('Office1', 'Office6', 12.0, 'corridor'))
+    building.add_edge(Edge('Classroom1', 'Classroom2', 12.0, 'corridor'))
+    building.add_edge(Edge('Office2', 'Office7', 12.0, 'corridor'))
+
+    # Floor 1: Exit connections
+    building.add_edge(Edge('Exit1', 'Office1', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit1', 'Office6', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit2', 'Office2', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit2', 'Office7', 8.0, 'hallway'))
+
+    # ========================================================================
+    # FLOOR 2 EDGES (Emergency conditions - some blocked)
+    # ========================================================================
+
+    # Floor 2: Top row - FIRE ZONE
+    # NOTE: Lab1 and Storage2 are IMPASSABLE, but edges exist in normal graph
+    # These will be filtered out during emergency routing
+    fire_zone_edge1 = Edge('Office3', 'Lab1', 10.0, 'corridor')
+    fire_zone_edge1.set_metadata('smoke_level', 'high')
+    fire_zone_edge1.set_metadata('blocked', True)  # Cannot traverse due to fire
+    building.add_edge(fire_zone_edge1)
+
+    fire_zone_edge2 = Edge('Lab1', 'Storage2', 10.0, 'corridor')
+    fire_zone_edge2.set_metadata('smoke_level', 'extreme')
+    fire_zone_edge2.set_metadata('blocked', True)  # Fire spread path
+    building.add_edge(fire_zone_edge2)
+
+    # Floor 2: Middle row connections (C3 and C4 accessible)
+    smoke_edge1 = Edge('Office3', 'Classroom3', 12.0, 'corridor')
+    smoke_edge1.set_metadata('smoke_level', 'high')
+    smoke_edge1.set_metadata('speed_factor', 0.7)  # Slow movement through smoke
+    building.add_edge(smoke_edge1)
+
+    smoke_edge2 = Edge('Classroom3', 'Classroom4', 12.0, 'corridor')
+    smoke_edge2.set_metadata('smoke_level', 'medium')
+    smoke_edge2.set_metadata('speed_factor', 0.8)
+    building.add_edge(smoke_edge2)
+
+    smoke_edge3 = Edge('Classroom4', 'Storage2', 12.0, 'corridor')
+    smoke_edge3.set_metadata('smoke_level', 'high')
+    smoke_edge3.set_metadata('blocked', True)  # Near fire, unsafe
+    building.add_edge(smoke_edge3)
+
+    # Floor 2: Bottom row connections
+    building.add_edge(Edge('Office4', 'Office5', 12.0, 'corridor'))
+    building.add_edge(Edge('Office5', 'Classroom5', 12.0, 'corridor'))
+
+    # Floor 2: Vertical connections within floor
+    building.add_edge(Edge('Office3', 'Office4', 10.0, 'corridor'))
+    building.add_edge(Edge('Classroom3', 'Office5', 10.0, 'corridor'))
+    building.add_edge(Edge('Classroom4', 'Classroom5', 10.0, 'corridor'))
+
+    # Floor 2: Exit3 connections (emergency exit on Floor 2 west side)
+    building.add_edge(Edge('Exit3', 'Office3', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit3', 'Classroom3', 8.0, 'hallway'))
+    building.add_edge(Edge('Exit3', 'Office4', 8.0, 'hallway'))
+
+    # ========================================================================
+    # STAIRWELL CONNECTIONS (some blocked)
+    # ========================================================================
+
+    # West stairwell (OPERATIONAL) - connects Exit1 to Floor 2
+    building.add_edge(Edge('Exit1', 'Office3', 20.0, 'stair'))
+    building.add_edge(Edge('Exit1', 'Office4', 22.0, 'stair'))
+
+    # Central access (OPERATIONAL) - limited capacity
+    building.add_edge(Edge('Classroom1', 'Classroom3', 25.0, 'stair'))
+    building.add_edge(Edge('Classroom1', 'Office5', 25.0, 'stair'))
+
+    # East stairwell (BLOCKED by debris) - these edges are blocked
+    blocked_stair1 = Edge('Exit2', 'Classroom4', 20.0, 'stair')
+    blocked_stair1.set_metadata('blocked', True)
+    blocked_stair1.set_metadata('blocked_reason', 'debris')
+    building.add_edge(blocked_stair1)
+
+    blocked_stair2 = Edge('Exit2', 'Classroom5', 20.0, 'stair')
+    blocked_stair2.set_metadata('blocked', True)
+    blocked_stair2.set_metadata('blocked_reason', 'debris')
+    building.add_edge(blocked_stair2)
+
+    # ========================================================================
+    # SET POSITIONS FOR VISUALIZATION
+    # ========================================================================
+
+    # Floor 1 positions (y = 0-2)
+    building.set_node_position('Exit1', 0.0, 1.0)
+    building.set_node_position('Exit2', 6.0, 1.0)
+
+    # Floor 1 top row (y=2)
+    building.set_node_position('Office1', 1.0, 2.0)
+    building.set_node_position('Classroom1', 2.5, 2.0)
+    building.set_node_position('Office2', 4.0, 2.0)
+
+    # Floor 1 bottom row (y=0)
+    building.set_node_position('Office6', 1.0, 0.0)
+    building.set_node_position('Classroom2', 2.5, 0.0)
+    building.set_node_position('Office7', 4.0, 0.0)
+
+    # Floor 2 positions (y = 4-7, separated vertically)
+    building.set_node_position('Exit3', 0.0, 5.5)
+
+    # Floor 2 top row (y=7) - FIRE ZONE
+    building.set_node_position('Office3', 1.0, 7.0)
+    building.set_node_position('Lab1', 2.5, 7.0)  # FIRE SOURCE
+    building.set_node_position('Storage2', 4.0, 7.0)  # BLOCKED
+
+    # Floor 2 middle row (y=5.5)
+    building.set_node_position('Classroom3', 1.0, 5.5)
+    building.set_node_position('Classroom4', 2.5, 5.5)
+    building.set_node_position('Classroom5', 4.0, 5.5)
+
+    # Floor 2 bottom row (y=4)
+    building.set_node_position('Office4', 1.0, 4.0)
+    building.set_node_position('Office5', 2.5, 4.0)
+
+    return building
