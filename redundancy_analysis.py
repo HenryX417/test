@@ -56,7 +56,8 @@ def compare_redundancy_modes(
             start_exit,
             building,
             building.exits,
-            walking_speed
+            walking_speed,
+            visibility
         )
         paths_redundant[resp_id] = (path, time_taken)
 

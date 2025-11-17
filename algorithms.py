@@ -131,7 +131,8 @@ def find_optimal_path(
     start_exit: str,
     building: BuildingGraph,
     exits: List[str],
-    walking_speed: float = 1.5
+    walking_speed: float = 1.5,
+    visibility: float = 1.0
 ) -> Tuple[List[str], float]:
     """
     Find near-optimal path through assigned rooms using nearest neighbor + 2-opt.
@@ -147,6 +148,7 @@ def find_optimal_path(
         building: BuildingGraph object
         exits: List of all exit IDs
         walking_speed: Walking speed in m/s
+        visibility: Visibility factor (0.0 to 1.0) affecting sweep times
 
     Returns:
         Tuple of (ordered path including start and end, total time)
@@ -196,7 +198,7 @@ def find_optimal_path(
     path = two_opt_improve(path, building, walking_speed, max_iterations=50)
 
     # Calculate total time
-    total_time = calculate_path_time(path, building, walking_speed)
+    total_time = calculate_path_time(path, building, walking_speed, visibility)
 
     return (path, total_time)
 
@@ -428,7 +430,8 @@ def naive_sequential_strategy(
             start_exit,
             building,
             building.exits,
-            walking_speed
+            walking_speed,
+            visibility
         )
         paths[resp_id] = (path, time_taken)
 

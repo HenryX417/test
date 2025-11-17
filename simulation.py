@@ -75,7 +75,8 @@ class EvacuationSimulation:
                 start_exit,
                 self.building,
                 self.building.exits,
-                walking_speed
+                walking_speed,
+                visibility
             )
             self.paths[resp_id] = (path, time_taken)
 
