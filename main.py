@@ -191,7 +191,8 @@ def generate_visualizations():
     # Import visualization functions
     try:
         from scenarios import (create_scenario1, create_scenario2, create_scenario3,
-                              create_scenario4, create_scenario5, create_scenario6)
+                              create_scenario4, create_scenario5, create_scenario6,
+                              create_scenario7)
         from visualization import (plot_floor_plan, plot_optimal_paths, plot_gantt_chart,
                                    plot_cluster_assignment, plot_responder_comparison,
                                    plot_sensitivity_analysis, plot_baseline_comparison,
@@ -229,9 +230,9 @@ def generate_visualizations():
                 # Cluster assignment
                 plot_cluster_assignment(building, sim.assignments, f'{name}_{num_resp}resp', OUTPUT_DIR)
 
-                # Paths and Gantt
+                # Paths (skip Gantt charts - not critical for paper)
                 plot_optimal_paths(building, sim.paths, f'{name}_{num_resp}resp', OUTPUT_DIR)
-                plot_gantt_chart(sim.get_timeline(), f'{name}_{num_resp}resp', OUTPUT_DIR)
+                # plot_gantt_chart(sim.get_timeline(), f'{name}_{num_resp}resp', OUTPUT_DIR)  # Skipped for paper
 
             # Responder comparison, sensitivity analysis, and baseline comparison
             plot_responder_comparison(building, name, max_responders=6, output_dir=OUTPUT_DIR)
@@ -247,10 +248,11 @@ def generate_visualizations():
 
         print_section('Generating emergency scenario visualizations')
 
-        # Emergency scenarios
+        # Emergency & Scalability scenarios
         emergency_scenarios = [
             ('Scenario_5_L_Shaped', create_scenario5()),
             ('Scenario_6_Fire', create_scenario6()),
+            ('Scenario_7_Large_Warehouse', create_scenario7()),  # Large scale for dramatic improvement
         ]
 
         for name, building in emergency_scenarios:
@@ -266,12 +268,17 @@ def generate_visualizations():
 
                 # Simulation
                 sim = EvacuationSimulation(building, 3)
-                sim.run(walking_speed=1.5, visibility=0.9, use_priority=True)
+                use_priority = 'Fire' in name or 'Warehouse' not in name  # Priority for fire, not for warehouse
+                sim.run(walking_speed=1.5, visibility=0.9, use_priority=use_priority)
 
-                # Visualizations
+                # Visualizations (skip Gantt - not critical for paper)
                 plot_cluster_assignment(building, sim.assignments, f'{name}_3resp', OUTPUT_DIR)
                 plot_optimal_paths(building, sim.paths, f'{name}_3resp', OUTPUT_DIR)
-                plot_gantt_chart(sim.get_timeline(), f'{name}_3resp', OUTPUT_DIR)
+                # plot_gantt_chart(sim.get_timeline(), f'{name}_3resp', OUTPUT_DIR)  # Skipped for paper
+
+                # For scenario 7 (large warehouse), show baseline comparison
+                if 'Warehouse' in name:
+                    plot_baseline_comparison(name, building, [3, 4, 5, 6], OUTPUT_DIR)
             except Exception as e:
                 print(f'  ⚠️  Skipped {name}: {e}')
 

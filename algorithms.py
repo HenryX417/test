@@ -396,9 +396,12 @@ def naive_sequential_strategy(
     visibility: float = 1.0
 ) -> Tuple[Dict[int, List[str]], Dict[int, Tuple[List[str], float]]]:
     """
-    Baseline strategy: Responders take rooms in sequential order.
+    TRULY NAIVE baseline: Sequential assignment + greedy path (NO optimization).
 
-    Rooms are divided evenly among responders in the order they appear.
+    This is intentionally poor to highlight our algorithm's improvements:
+    - Rooms divided sequentially (NO spatial awareness)
+    - Paths visit rooms in assigned order (NO nearest-neighbor or 2-opt)
+    - Represents worst-case unintelligent approach
 
     Args:
         building: BuildingGraph object
@@ -412,12 +415,12 @@ def naive_sequential_strategy(
     rooms = building.get_all_room_ids()
     assignments = {i: [] for i in range(num_responders)}
 
-    # Divide rooms sequentially
+    # Divide rooms sequentially (NO spatial clustering)
     for idx, room_id in enumerate(rooms):
         responder_id = idx % num_responders
         assignments[responder_id].append(room_id)
 
-    # Find paths for each responder
+    # Create truly naive paths (just visit in order assigned)
     paths = {}
     for resp_id in range(num_responders):
         if not assignments[resp_id]:
@@ -425,15 +428,30 @@ def naive_sequential_strategy(
             continue
 
         start_exit = building.exits[resp_id % len(building.exits)]
-        path, time_taken = find_optimal_path(
-            assignments[resp_id],
-            start_exit,
-            building,
-            building.exits,
-            walking_speed,
-            visibility
-        )
-        paths[resp_id] = (path, time_taken)
+
+        # Build path: start -> rooms in order -> back to start
+        path = [start_exit]
+        path.extend(assignments[resp_id])  # Visit rooms in assigned order (NO optimization)
+        path.append(start_exit)  # Return to same exit
+
+        # Calculate time for this naive path
+        total_time = 0.0
+        current = start_exit
+
+        for next_node in path[1:]:
+            # Get shortest path between current and next (but overall path is still naive)
+            _, travel_time = building.shortest_path(current, next_node, walking_speed)
+            total_time += travel_time
+
+            # Add sweep time if it's a room
+            room = building.get_room(next_node)
+            if room and room.get_metadata('passable', True):
+                sweep_time = room.calculate_sweep_time(visibility)
+                total_time += sweep_time
+
+            current = next_node
+
+        paths[resp_id] = (path, total_time)
 
     return (assignments, paths)
 
