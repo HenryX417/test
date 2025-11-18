@@ -102,7 +102,7 @@ def run_emergency_scenarios():
     """Run emergency scenarios (Part 4)."""
     print_header('PART 4: EMERGENCY SCENARIOS')
 
-    from scenarios import create_scenario5, create_scenario6, create_scenario7
+    from scenarios import create_scenario5, create_scenario6
     from simulation import EvacuationSimulation
     from analysis import run_emergency_comparison
 
@@ -113,28 +113,26 @@ def run_emergency_scenarios():
     time5 = sim5.get_total_time()
     print(f'  ✅ L-shaped layout: {time5:.1f}s')
 
-    print_section('Scenario 6: Fire Emergency (Blocked Areas)')
-    print('  ⚠️  Scenario 6 temporarily skipped (graph connectivity issue)')
-    print('  ℹ️  Emergency routing algorithm implemented in analysis.py')
-    results6 = {'emergency_time': 0, 'time_penalty': 0}
-    # building6 = create_scenario6()
-    # results6 = run_emergency_comparison(building6, num_responders=3)
+    print_section('Scenario 6: Fire Emergency (Blocked Lab Room)')
+    building6 = create_scenario6()
 
-    print_section('Scenario 7: Gas Leak (Priority Mode)')
-    building7 = create_scenario7()
-    sim7_std = EvacuationSimulation(building7, num_responders=3)
-    sim7_std.run(walking_speed=1.5, visibility=0.9, use_priority=False)
-    time7_std = sim7_std.get_total_time()
+    # Run with priority mode (prioritize floor 2 rooms near fire)
+    sim6_pri = EvacuationSimulation(building6, num_responders=3)
+    sim6_pri.run(walking_speed=1.5, visibility=0.9, use_priority=True)
+    time6_pri = sim6_pri.get_total_time()
 
-    sim7_pri = EvacuationSimulation(building7, num_responders=3)
-    sim7_pri.run(walking_speed=1.5, visibility=0.9, use_priority=True)
-    time7_pri = sim7_pri.get_total_time()
-    print(f'  ✅ Gas leak (priority): {time7_pri:.1f}s')
+    # Run without priority for comparison
+    sim6_std = EvacuationSimulation(building6, num_responders=3)
+    sim6_std.run(walking_speed=1.5, visibility=0.9, use_priority=False)
+    time6_std = sim6_std.get_total_time()
+
+    time_penalty = ((time6_pri - time6_std) / time6_std * 100) if time6_std > 0 else 0
+    print(f'  ✅ Fire emergency: {time6_pri:.1f}s (priority mode)')
+    print(f'  ℹ️  Time penalty for priority: {time_penalty:+.1f}%')
 
     return {
         'scenario5': time5,
-        'scenario6': results6,
-        'scenario7': {'standard': time7_std, 'priority': time7_pri}
+        'scenario6': {'priority': time6_pri, 'standard': time6_std, 'penalty': time_penalty}
     }
 
 
@@ -193,8 +191,7 @@ def generate_visualizations():
     # Import visualization functions
     try:
         from scenarios import (create_scenario1, create_scenario2, create_scenario3,
-                              create_scenario4, create_scenario5, create_scenario6,
-                              create_scenario7)
+                              create_scenario4, create_scenario5, create_scenario6)
         from visualization import (plot_floor_plan, plot_optimal_paths, plot_gantt_chart,
                                    plot_cluster_assignment, plot_responder_comparison,
                                    plot_sensitivity_analysis, generate_comparison_table,
@@ -251,7 +248,7 @@ def generate_visualizations():
         # Emergency scenarios
         emergency_scenarios = [
             ('Scenario_5_L_Shaped', create_scenario5()),
-            ('Scenario_7_Gas_Leak', create_scenario7()),  # Skip Scenario 6 (connectivity issues)
+            ('Scenario_6_Fire', create_scenario6()),
         ]
 
         for name, building in emergency_scenarios:
@@ -320,14 +317,12 @@ def generate_executive_summary(all_results):
 ## Emergency Scenarios (Part 4)
 
 ### Non-Standard Layout (Scenario 5)
-- **Result:** {part4_emergency.get('scenario5', 0):.1f}s
+- **L-Shaped Building:** {part4_emergency.get('scenario5', 0):.1f}s
 
 ### Fire Emergency (Scenario 6)
-- **Emergency Time:** {part4_emergency.get('scenario6', {}).get('emergency_time', 0):.1f}s
-- **Time Penalty:** {part4_emergency.get('scenario6', {}).get('time_penalty', 0):+.1f}%
-
-### Gas Leak (Scenario 7)
-- **Priority Mode:** {part4_emergency.get('scenario7', {}).get('priority', 0):.1f}s
+- **Priority Mode:** {part4_emergency.get('scenario6', {}).get('priority', 0):.1f}s
+- **Standard Mode:** {part4_emergency.get('scenario6', {}).get('standard', 0):.1f}s
+- **Time Penalty:** {part4_emergency.get('scenario6', {}).get('penalty', 0):+.1f}%
 
 ---
 
