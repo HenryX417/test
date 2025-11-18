@@ -461,6 +461,8 @@ def create_scenario4() -> BuildingGraph:
     # Cross connections
     building.add_edge(Edge('Office1', 'Storage1', 14.0, 'corridor'))
     building.add_edge(Edge('Office2', 'Storage1', 14.0, 'corridor'))
+    building.add_edge(Edge('Reception', 'Ward1', 14.0, 'corridor'))
+    building.add_edge(Edge('Reception', 'Ward2', 14.0, 'corridor'))
 
     # Exit connections
     building.add_edge(Edge('Exit1', 'Office1', 8.0, 'hallway'))
@@ -487,6 +489,8 @@ def create_scenario4() -> BuildingGraph:
     # Cross connections
     building.add_edge(Edge('ICU1', 'ER2', 14.0, 'corridor'))
     building.add_edge(Edge('ICU2', 'ER2', 14.0, 'corridor'))
+    building.add_edge(Edge('OR1', 'ER1', 14.0, 'corridor'))
+    building.add_edge(Edge('OR1', 'ER3', 14.0, 'corridor'))
 
     # ========================================================================
     # STAIR CONNECTIONS (Exits to Floor 2) - Heavy weight (25m)
@@ -771,6 +775,12 @@ def create_scenario6() -> BuildingGraph:
     building.add_edge(Edge('Classroom1', 'Storage1', 12.0, 'corridor'))
     building.add_edge(Edge('Office2', 'Office4', 12.0, 'corridor'))
 
+    # Cross connections for Floor 1
+    building.add_edge(Edge('Office1', 'Storage1', 14.0, 'corridor'))
+    building.add_edge(Edge('Office2', 'Storage1', 14.0, 'corridor'))
+    building.add_edge(Edge('Classroom1', 'Office3', 14.0, 'corridor'))
+    building.add_edge(Edge('Classroom1', 'Office4', 14.0, 'corridor'))
+
     # Exit connections
     building.add_edge(Edge('Exit1', 'Office1', 8.0, 'hallway'))
     building.add_edge(Edge('Exit1', 'Office3', 8.0, 'hallway'))
@@ -797,6 +807,10 @@ def create_scenario6() -> BuildingGraph:
     building.add_edge(Edge('Classroom2', 'Classroom5', 14.0, 'corridor'))
     building.add_edge(Edge('Classroom3', 'Classroom5', 14.0, 'corridor'))
     building.add_edge(Edge('Classroom4', 'Classroom6', 14.0, 'corridor'))
+    # Lab1 connections to bottom row (even though Lab is blocked, edges help with routing)
+    building.add_edge(Edge('Lab1', 'Classroom4', 14.0, 'corridor'))
+    building.add_edge(Edge('Lab1', 'Classroom5', 12.0, 'corridor'))
+    building.add_edge(Edge('Lab1', 'Classroom6', 14.0, 'corridor'))
 
     # ========================================================================
     # STAIR CONNECTIONS (Exits to Floor 2) - Heavy weight (25m)

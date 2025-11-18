@@ -194,7 +194,8 @@ def generate_visualizations():
                               create_scenario4, create_scenario5, create_scenario6)
         from visualization import (plot_floor_plan, plot_optimal_paths, plot_gantt_chart,
                                    plot_cluster_assignment, plot_responder_comparison,
-                                   plot_sensitivity_analysis, generate_comparison_table,
+                                   plot_sensitivity_analysis, plot_baseline_comparison,
+                                   generate_comparison_table,
                                    generate_room_properties_table, generate_edge_weights_table)
         from simulation import EvacuationSimulation
 
@@ -232,9 +233,10 @@ def generate_visualizations():
                 plot_optimal_paths(building, sim.paths, f'{name}_{num_resp}resp', OUTPUT_DIR)
                 plot_gantt_chart(sim.get_timeline(), f'{name}_{num_resp}resp', OUTPUT_DIR)
 
-            # Responder comparison and sensitivity analysis
+            # Responder comparison, sensitivity analysis, and baseline comparison
             plot_responder_comparison(building, name, max_responders=6, output_dir=OUTPUT_DIR)
             plot_sensitivity_analysis(building, name, num_responders=4, output_dir=OUTPUT_DIR)
+            plot_baseline_comparison(name, building, [1, 2, 3, 4], OUTPUT_DIR)
 
         # Comparison table
         scenarios_dict = {name: building for name, building in scenarios[:3]}

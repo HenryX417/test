@@ -131,15 +131,15 @@ def plot_floor_plan(building: BuildingGraph, scenario_name: str, output_dir: str
 
         x, y = pos[room_id]
 
-        # Hollow circle with black outline
-        circle = plt.Circle((x, y), radius=0.16,  # Larger nodes for visibility
+        # Bigger hollow circle with black outline
+        circle = plt.Circle((x, y), radius=0.22,  # Increased from 0.16 to 0.22
                            facecolor='lightblue', edgecolor='black',
-                           linewidth=2, zorder=3)
+                           linewidth=2.5, zorder=3)
         ax.add_patch(circle)
 
-        # Room label (shortened)
-        short_label = room_id.replace('Office', 'O').replace('Classroom', 'C').replace('Lab', 'L').replace('Storage', 'S').replace('Daycare', 'D')
-        ax.text(x, y, short_label, fontsize=12, ha='center', va='center',
+        # Room label (shortened) - font fits within circle
+        short_label = room_id.replace('Office', 'O').replace('Classroom', 'C').replace('Lab', 'L').replace('Storage', 'S').replace('Daycare', 'D').replace('Reception', 'R').replace('Ward', 'W').replace('ICU', 'ICU').replace('ER', 'ER').replace('OR', 'OR')
+        ax.text(x, y, short_label, fontsize=10, ha='center', va='center',
                fontweight='bold', zorder=4)
 
     # Draw EXIT nodes (hollow squares)
@@ -149,15 +149,15 @@ def plot_floor_plan(building: BuildingGraph, scenario_name: str, output_dir: str
 
         x, y = pos[exit_id]
 
-        # Hollow square with black outline
-        square = mpatches.Rectangle((x - 0.16, y - 0.16), 0.32, 0.32,  # Larger nodes for visibility
+        # Bigger hollow square with black outline
+        square = mpatches.Rectangle((x - 0.22, y - 0.22), 0.44, 0.44,  # Increased from 0.32 to 0.44
                                     facecolor='lightgreen', edgecolor='black',
-                                    linewidth=2, zorder=3)
+                                    linewidth=2.5, zorder=3)
         ax.add_patch(square)
 
         # Exit label (shortened)
         exit_label = exit_id.replace('Exit', 'E')
-        ax.text(x, y, exit_label, fontsize=10, ha='center', va='center',
+        ax.text(x, y, exit_label, fontsize=11, ha='center', va='center',
                fontweight='bold', zorder=4)
 
     # Formatting
@@ -216,25 +216,25 @@ def plot_cluster_assignment(
         room = building.get_room(node)
 
         if room:
-            # Room node - color by responder
+            # Room node - color by responder (BIGGER nodes)
             resp_id = room_to_responder.get(node, -1)
             if resp_id >= 0:
                 color = RESPONDER_COLORS[resp_id % len(RESPONDER_COLORS)]
             else:
                 color = '#95a5a6'  # Unassigned
 
-            circle = plt.Circle((x, y), radius=0.16, color=color, alpha=0.7, zorder=2)  # Larger for visibility
+            circle = plt.Circle((x, y), radius=0.22, color=color, alpha=0.7, zorder=2, linewidth=2)
             ax.add_patch(circle)
-            label = node.replace('Office', 'O').replace('Classroom', 'C').replace('Lab', 'L').replace('Storage', 'S')
+            label = node.replace('Office', 'O').replace('Classroom', 'C').replace('Lab', 'L').replace('Storage', 'S').replace('Daycare', 'D').replace('Reception', 'R').replace('Ward', 'W').replace('ICU', 'ICU').replace('ER', 'ER').replace('OR', 'OR')
             ax.text(x, y, label,
                    fontsize=10, ha='center', va='center', fontweight='bold', zorder=3)
         elif node in building.exits:
-            # Exit node (square)
-            square = mpatches.Rectangle((x - 0.16, y - 0.16), 0.32, 0.32,  # Larger for visibility
-                                       color='#27ae60', alpha=0.8, zorder=2)
+            # Exit node (square - BIGGER)
+            square = mpatches.Rectangle((x - 0.22, y - 0.22), 0.44, 0.44,
+                                       color='#27ae60', alpha=0.8, zorder=2, linewidth=2)
             ax.add_patch(square)
             ax.text(x, y, node.replace('Exit', 'E'),
-                   fontsize=10, ha='center', va='center', fontweight='bold',
+                   fontsize=11, ha='center', va='center', fontweight='bold',
                    color='white', zorder=3)
         else:
             # Routing node (small gray circle)
@@ -293,7 +293,7 @@ def plot_optimal_paths(
             y_vals = [pos[edge.start][1], pos[edge.end][1]]
             ax.plot(x_vals, y_vals, 'k-', alpha=0.1, linewidth=0.25)  # Very thin edges
 
-    # Draw base nodes
+    # Draw base nodes (BIGGER for better visibility)
     for node in all_nodes:
         if node not in pos:
             continue
@@ -302,15 +302,15 @@ def plot_optimal_paths(
         room = building.get_room(node)
 
         if room:
-            circle = plt.Circle((x, y), radius=0.12, color='#ecf0f1', alpha=0.5, zorder=1)  # Larger for visibility
+            circle = plt.Circle((x, y), radius=0.18, color='#ecf0f1', alpha=0.5, zorder=1, linewidth=1.5)
             ax.add_patch(circle)
         elif node in building.exits:
-            square = mpatches.Rectangle((x - 0.12, y - 0.12), 0.24, 0.24,  # Larger for visibility
-                                       color='#27ae60', alpha=0.6, zorder=1)
+            square = mpatches.Rectangle((x - 0.18, y - 0.18), 0.36, 0.36,
+                                       color='#27ae60', alpha=0.6, zorder=1, linewidth=1.5)
             ax.add_patch(square)
         else:
             # Routing node
-            circle = plt.Circle((x, y), radius=0.06, color='#95a5a6', alpha=0.3, zorder=1)  # Slightly larger
+            circle = plt.Circle((x, y), radius=0.06, color='#95a5a6', alpha=0.3, zorder=1)
             ax.add_patch(circle)
 
     # Draw paths
@@ -657,3 +657,82 @@ def generate_edge_weights_table(building: BuildingGraph) -> pd.DataFrame:
     df = df.drop_duplicates(subset=['Distance (m)', 'Type'])
 
     return df.head(20)  # Return top 20 edges
+
+
+def plot_baseline_comparison(
+    scenario_name: str,
+    building,
+    num_responders_list: list = [1, 2, 3, 4],
+    output_dir: str = '/mnt/user-data/outputs'
+):
+    """
+    Create bar chart comparing optimized algorithm against baselines.
+    
+    Args:
+        scenario_name: Name of the scenario
+        building: BuildingGraph object
+        num_responders_list: List of responder counts to test
+        output_dir: Directory to save output
+    """
+    import numpy as np
+    from simulation import EvacuationSimulation
+    from algorithms import naive_sequential_strategy, nearest_neighbor_only
+    
+    results = {'Optimized (Ours)': [], 'Nearest Neighbor': [], 'Naive Sequential': []}
+    
+    for num_resp in num_responders_list:
+        # Our optimized algorithm
+        sim = EvacuationSimulation(building, num_resp)
+        sim.run(walking_speed=1.5, visibility=1.0)
+        results['Optimized (Ours)'].append(sim.get_total_time())
+        
+        # Baseline: Naive Sequential
+        _, naive_paths = naive_sequential_strategy(building, num_resp, 1.5, 1.0)
+        naive_time = max(time for _, time in naive_paths.values()) if naive_paths else 0
+        results['Naive Sequential'].append(naive_time)
+        
+        # Baseline: Nearest Neighbor only
+        _, nn_paths = nearest_neighbor_only(building, num_resp, 1.5, 1.0)
+        nn_time = max(time for _, time in nn_paths.values()) if nn_paths else 0
+        results['Nearest Neighbor'].append(nn_time)
+    
+    # Create bar chart
+    fig, ax = plt.subplots(figsize=(12, 7))
+    
+    x = np.arange(len(num_responders_list))
+    width = 0.25
+    
+    bars1 = ax.bar(x - width, results['Optimized (Ours)'], width, label='Optimized (Ours)', color='#2ecc71', alpha=0.8)
+    bars2 = ax.bar(x, results['Nearest Neighbor'], width, label='Nearest Neighbor', color='#3498db', alpha=0.8)
+    bars3 = ax.bar(x + width, results['Naive Sequential'], width, label='Naive Sequential', color='#e74c3c', alpha=0.8)
+    
+    # Add value labels on bars
+    for bars in [bars1, bars2, bars3]:
+        for bar in bars:
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2., height,
+                   f'{height:.1f}s',
+                   ha='center', va='bottom', fontsize=9, fontweight='bold')
+    
+    ax.set_xlabel('Number of Responders', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Total Clearance Time (seconds)', fontsize=12, fontweight='bold')
+    ax.set_title(f'Algorithm Comparison - {scenario_name}', fontsize=14, fontweight='bold')
+    ax.set_xticks(x)
+    ax.set_xticklabels(num_responders_list)
+    ax.legend(fontsize=11, loc='upper right')
+    ax.grid(axis='y', alpha=0.3, linestyle='--')
+    
+    # Calculate and show improvement percentages
+    improvements = []
+    for i, num_resp in enumerate(num_responders_list):
+        if results['Naive Sequential'][i] > 0:
+            imp = ((results['Naive Sequential'][i] - results['Optimized (Ours)'][i]) / results['Naive Sequential'][i]) * 100
+            improvements.append(f"{num_resp}R: {imp:+.1f}%")
+    
+    improvement_text = "Improvement vs Naive: " + ", ".join(improvements)
+    ax.text(0.5, 0.98, improvement_text, transform=ax.transAxes,
+           ha='center', va='top', fontsize=10, bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+    
+    plt.tight_layout()
+    plt.savefig(f'{output_dir}/baseline_comparison_{scenario_name}.png', dpi=300, bbox_inches='tight')
+    plt.close()
