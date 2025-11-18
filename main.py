@@ -196,7 +196,9 @@ def generate_visualizations():
                               create_scenario4, create_scenario5, create_scenario6,
                               create_scenario7)
         from visualization import (plot_floor_plan, plot_optimal_paths, plot_gantt_chart,
-                                   plot_responder_comparison, generate_comparison_table)
+                                   plot_cluster_assignment, plot_responder_comparison,
+                                   plot_sensitivity_analysis, generate_comparison_table,
+                                   generate_room_properties_table, generate_edge_weights_table)
         from simulation import EvacuationSimulation
 
         print_section('Generating core scenario visualizations')
@@ -213,18 +215,34 @@ def generate_visualizations():
             # Floor plan
             plot_floor_plan(building, name, OUTPUT_DIR)
 
+            # Data tables
+            room_props_df = generate_room_properties_table(building)
+            room_props_df.to_csv(f'{OUTPUT_DIR}/room_properties_{name}.csv', index=False)
+
+            edge_weights_df = generate_edge_weights_table(building)
+            edge_weights_df.to_csv(f'{OUTPUT_DIR}/edge_weights_{name}.csv', index=False)
+
             # Simulations for 1-4 responders
             for num_resp in [1, 2, 3, 4]:
                 sim = EvacuationSimulation(building, num_resp)
                 use_priority = ('Multi_Floor' in name)
                 sim.run(walking_speed=1.5, visibility=1.0, use_priority=use_priority)
 
+                # Cluster assignment
+                plot_cluster_assignment(building, sim.assignments, f'{name}_{num_resp}resp', OUTPUT_DIR)
+
                 # Paths and Gantt
                 plot_optimal_paths(building, sim.paths, f'{name}_{num_resp}resp', OUTPUT_DIR)
-                plot_gantt_chart(sim.get_timeline(), name, num_resp, OUTPUT_DIR)
+                plot_gantt_chart(sim.get_timeline(), f'{name}_{num_resp}resp', OUTPUT_DIR)
+
+            # Responder comparison and sensitivity analysis
+            plot_responder_comparison(building, name, max_responders=6, output_dir=OUTPUT_DIR)
+            plot_sensitivity_analysis(building, name, num_responders=4, output_dir=OUTPUT_DIR)
 
         # Comparison table
-        generate_comparison_table(scenarios[:3], OUTPUT_DIR)
+        scenarios_dict = {name: building for name, building in scenarios[:3]}
+        comparison_df = generate_comparison_table(scenarios_dict, [1, 2, 3, 4])
+        comparison_df.to_csv(f'{OUTPUT_DIR}/comparison_table.csv', index=False)
 
         print('  ✅ Core visualizations generated')
 
@@ -239,10 +257,22 @@ def generate_visualizations():
         for name, building in emergency_scenarios:
             try:
                 plot_floor_plan(building, name, OUTPUT_DIR)
+
+                # Data tables
+                room_props_df = generate_room_properties_table(building)
+                room_props_df.to_csv(f'{OUTPUT_DIR}/room_properties_{name}.csv', index=False)
+
+                edge_weights_df = generate_edge_weights_table(building)
+                edge_weights_df.to_csv(f'{OUTPUT_DIR}/edge_weights_{name}.csv', index=False)
+
+                # Simulation
                 sim = EvacuationSimulation(building, 3)
                 sim.run(walking_speed=1.5, visibility=0.9, use_priority=True)
+
+                # Visualizations
+                plot_cluster_assignment(building, sim.assignments, f'{name}_3resp', OUTPUT_DIR)
                 plot_optimal_paths(building, sim.paths, f'{name}_3resp', OUTPUT_DIR)
-                plot_gantt_chart(sim.get_timeline(), name, 3, OUTPUT_DIR)
+                plot_gantt_chart(sim.get_timeline(), f'{name}_3resp', OUTPUT_DIR)
             except Exception as e:
                 print(f'  ⚠️  Skipped {name}: {e}')
 
